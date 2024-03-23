@@ -5,6 +5,7 @@ from functools import lru_cache
 import torch
 import gradio as gr
 from transformers import set_seed
+from transformers import LlamaForCausalLM, LlamaTokenizer
 
 import modules.scripts as scripts
 from modules.scripts import basedir
@@ -26,28 +27,22 @@ all_model_file = [f for f in os.listdir(ext_dir + "/models") if f.endswith(".ggu
 
 
 try:
-    from llama_cpp import Llama, LLAMA_SPLIT_MODE_NONE
+    from llama_cpp import Llama
 
     text_model = Llama(
-        all_model_file[-1],
+        os.path.join(ext_dir, "models", all_model_file[-1]),
         n_ctx=384,
-        split_mode=LLAMA_SPLIT_MODE_NONE,
         n_gpu_layers=100,
         verbose=False,
     )
-    tokenizer = None
+    logger.info("Llama-cpp-python/gguf model loaded")
 except:
-    logger.warning("Llama-cpp-python not found, using transformers to load model")
-    from transformers import LlamaForCausalLM, LlamaTokenizer
+    logger.warning("Llama-cpp-python/gguf model not found, using transformers to load model")
 
-    text_model = (
-        LlamaForCausalLM.from_pretrained("KBlueLeaf/DanTagGen-beta").eval().half()
-    )
-    tokenizer = LlamaTokenizer.from_pretrained("KBlueLeaf/DanTagGen-beta")
-    if torch.cuda.is_available():
-        text_model = text_model.cuda()
-    else:
-        text_model = text_model.cpu()
+    text_model = LlamaForCausalLM.from_pretrained(
+        "KBlueLeaf/DanTagGen-beta"
+    ).eval().half()
+tokenizer = LlamaTokenizer.from_pretrained("KBlueLeaf/DanTagGen-beta")
 
 
 TOTAL_TAG_LENGTH = {
@@ -201,11 +196,16 @@ class DTGScript(scripts.Script):
         if seed == -1:
             seed = random.randrange(4294967294)
 
+        if torch.cuda.is_available() and isinstance(text_model, torch.nn.Module):
+            text_model.cuda()
         new_all_prompts = []
         for prompt in p.all_prompts:
             new_all_prompts.append(self._process(prompt, aspect_ratio, seed, *args))
 
         p.all_prompts = new_all_prompts
+        if torch.cuda.is_available() and isinstance(text_model, torch.nn.Module):
+            text_model.cpu()
+            torch.cuda.empty_cache()
 
     def before_process(
         self,
@@ -227,7 +227,12 @@ class DTGScript(scripts.Script):
         if seed == -1:
             seed = random.randrange(4294967294)
 
+        if torch.cuda.is_available() and isinstance(text_model, torch.nn.Module):
+            text_model.cuda()
         p.prompt = self._process(p.prompt, aspect_ratio, seed, *args)
+        if torch.cuda.is_available() and isinstance(text_model, torch.nn.Module):
+            text_model.cpu()
+            torch.cuda.empty_cache()
 
     @lru_cache(128)
     def _process(
