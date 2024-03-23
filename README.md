@@ -35,6 +35,9 @@ After install it into the sd-webui or sd-webui-forge. Just enable it in the acor
   * Before: Before other prompt processings.
 * Temperature: Higher = more dynamic result, Lower = better coherence between tags.
 
+## Example
+![image](https://github.com/KohakuBlueleaf/a1111-sd-webui-dtg/assets/59680068/49ef74f7-5943-4ef4-83f2-2cdc34850df8)
+
 
 ## Faster inference
 
