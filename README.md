@@ -4,6 +4,8 @@ A sd-webui extension for utilizing DanTagGen to "upsample prompts".
 
 It can generate the detail tags/core tags about the character you put in the prompts. It can also add some extra elements into your prompt.
 
+**an extra z is added to repo name to ensure this extension will run `process()` after other extensions**
+
 
 ## What is DanTagGen
 
