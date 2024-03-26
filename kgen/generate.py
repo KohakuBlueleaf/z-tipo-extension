@@ -82,9 +82,8 @@ def tag_gen(
     top_p=0.95,
     top_k=100,
     max_new_tokens=256,
-    max_retry=5,
+    max_retry=25,
 ):
-    prev_len = 0
     retry = max_retry
     llm_gen = ""
 
@@ -120,13 +119,9 @@ def tag_gen(
         yield llm_gen, extra_tokens
 
         if len(prompt_tags) + len(extra_tokens) < len_target:
-            if len(extra_tokens) == prev_len and prev_len > 0:
-                if retry < 0:
-                    break
-                retry -= 1
+            retry -= 1
             shuffle(extra_tokens)
             retry = max_retry
-            prev_len = len(extra_tokens)
             prompt = llm_gen.strip().replace("  <|", " <|")
         else:
             break

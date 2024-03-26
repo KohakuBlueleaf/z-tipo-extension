@@ -245,6 +245,10 @@ class DTGScript(scripts.Script):
         format: str,
         temperature: float,
     ):
+        logger.info(
+            f"Processing propmt: {prompt[:20]}...\n"
+            f"Processing with seed: {seed}"
+        )
         set_seed(seed)
         prompt_without_extranet, res = parse_prompt(prompt)
         prompt_parse_strength = parse_prompt_attention(prompt_without_extranet)
@@ -296,4 +300,6 @@ class DTGScript(scripts.Script):
                     new_list.append(tag)
             tag_map[cate] = new_list
         prompt_by_dtg = apply_format(tag_map, format)
+
+        logger.info("Prompt processing done.")
         return prompt_by_dtg + "\n" + rebuild_extranet
