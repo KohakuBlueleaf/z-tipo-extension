@@ -195,12 +195,13 @@ class DTGScript(scripts.Script):
         aspect_ratio = p.width / p.height
         if seed == -1:
             seed = random.randrange(4294967294)
+        seed = int(seed)
 
         if torch.cuda.is_available() and isinstance(text_model, torch.nn.Module):
             text_model.cuda()
         new_all_prompts = []
-        for prompt in p.all_prompts:
-            new_all_prompts.append(self._process(prompt, aspect_ratio, seed, *args))
+        for prompt, sub_seed in zip(p.all_prompts, p.all_seeds):
+            new_all_prompts.append(self._process(prompt, aspect_ratio, seed + sub_seed, *args))
 
         p.all_prompts = new_all_prompts
         if torch.cuda.is_available() and isinstance(text_model, torch.nn.Module):
@@ -226,6 +227,7 @@ class DTGScript(scripts.Script):
         aspect_ratio = p.width / p.height
         if seed == -1:
             seed = random.randrange(4294967294)
+        seed = int(seed)
 
         if torch.cuda.is_available() and isinstance(text_model, torch.nn.Module):
             text_model.cuda()
