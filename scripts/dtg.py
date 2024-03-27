@@ -227,7 +227,7 @@ class DTGScript(scripts.Script):
         aspect_ratio = p.width / p.height
         if seed == -1:
             seed = random.randrange(4294967294)
-        seed = int(seed)
+        seed = int(seed + p.seed)
 
         if torch.cuda.is_available() and isinstance(text_model, torch.nn.Module):
             text_model.cuda()
