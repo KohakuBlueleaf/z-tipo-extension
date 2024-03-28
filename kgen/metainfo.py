@@ -39,6 +39,16 @@ POSSIBLE_QUALITY_TAGS = [
     "mid",
     "early",
     "old",
+    "score_9",
+    "score_8_up",
+    "score_7_up",
+    "score_6_up",
+    "score_5_up",
+    "score_4_up",
+    "source_anime",
+    "source_cartoon",
+    "source_furry",
+    "source_pony",
 ]
 RATING_TAGS = ["safe", "general", "sfw", "sensitive", "nsfw", "explicit"]
 TARGET = {
