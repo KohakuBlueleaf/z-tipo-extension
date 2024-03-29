@@ -46,7 +46,6 @@ def apply_dtg_prompt(tag_map, target="", aspect_ratio=1.0):
     characters = ", ".join(tag_map.get("characters", []))
     copyrights = ", ".join(tag_map.get("copyrights", []))
     general = ", ".join(tag_map.get("general", []))
-    aspect_ratio = aspect_ratio
     prompt = f"""
 rating: {rating or '<|empty|>'}
 artist: {artist.strip() or '<|empty|>'}

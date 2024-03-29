@@ -22,6 +22,8 @@ from kgen.generate import tag_gen
 from kgen.logging import logger
 
 
+SEED_MAX = 2**31-1
+
 ext_dir = basedir()
 all_model_file = [f for f in os.listdir(ext_dir + "/models") if f.endswith(".gguf")]
 
@@ -117,14 +119,14 @@ class DTGScript(scripts.Script):
                         seed_shuffle_btn = gr.Button(value="Shuffle")
 
                         def click_random_seed_btn():
-                            return random.randint(0, 2**31 - 1)
+                            return -1
 
                         seed_random_btn.click(
                             click_random_seed_btn, outputs=[seed_num_input]
                         )
 
                         def click_shuffle_seed_btn():
-                            return -1
+                            return random.randint(0, 2**31 - 1)
 
                         seed_shuffle_btn.click(
                             click_shuffle_seed_btn, outputs=[seed_num_input]
@@ -194,7 +196,7 @@ class DTGScript(scripts.Script):
 
         aspect_ratio = p.width / p.height
         if seed == -1:
-            seed = random.randrange(4294967294)
+            seed = random.randrange(2**31 - 1)
         seed = int(seed)
 
         if torch.cuda.is_available() and isinstance(text_model, torch.nn.Module):
@@ -251,7 +253,7 @@ class DTGScript(scripts.Script):
             f"Processing propmt: {prompt[:20]}...\n"
             f"Processing with seed: {seed}"
         )
-        set_seed(seed)
+        set_seed(seed % SEED_MAX)
         prompt_without_extranet, res = parse_prompt(prompt)
         prompt_parse_strength = parse_prompt_attention(prompt_without_extranet)
 
