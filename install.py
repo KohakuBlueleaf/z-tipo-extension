@@ -14,6 +14,7 @@ llama_cpp_python_wheel = (
     "--extra-index-url=https://jllllll.github.io/llama-cpp-python-cuBLAS-wheels/{}/{}"
 )
 
+
 def install_llama_cpp():
     if get_installed_version("llama_cpp_python") is not None:
         return
@@ -22,7 +23,9 @@ def install_llama_cpp():
 
     has_cuda = torch.cuda.is_available()
     cuda_version = torch.version.cuda.replace(".", "")
-    package = llama_cpp_python_wheel.format("AVX2", f"cu{cuda_version}" if has_cuda else "cpu")
+    package = llama_cpp_python_wheel.format(
+        "AVX2", f"cu{cuda_version}" if has_cuda else "cpu"
+    )
 
     launch.run_pip(
         f"install {package}",

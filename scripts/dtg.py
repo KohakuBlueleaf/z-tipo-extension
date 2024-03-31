@@ -4,7 +4,6 @@ from functools import lru_cache
 
 import torch
 import gradio as gr
-from transformers import set_seed
 from transformers import LlamaForCausalLM, LlamaTokenizer
 
 import modules.scripts as scripts
@@ -22,7 +21,7 @@ from kgen.generate import tag_gen
 from kgen.logging import logger
 
 
-SEED_MAX = 2**31-1
+SEED_MAX = 2**31 - 1
 
 ext_dir = basedir()
 all_model_file = [f for f in os.listdir(ext_dir + "/models") if f.endswith(".gguf")]
@@ -39,11 +38,13 @@ try:
     )
     logger.info("Llama-cpp-python/gguf model loaded")
 except:
-    logger.warning("Llama-cpp-python/gguf model not found, using transformers to load model")
+    logger.warning(
+        "Llama-cpp-python/gguf model not found, using transformers to load model"
+    )
 
-    text_model = LlamaForCausalLM.from_pretrained(
-        "KBlueLeaf/DanTagGen-beta"
-    ).eval().half()
+    text_model = (
+        LlamaForCausalLM.from_pretrained("KBlueLeaf/DanTagGen-beta").eval().half()
+    )
 tokenizer = LlamaTokenizer.from_pretrained("KBlueLeaf/DanTagGen-beta")
 
 
@@ -203,9 +204,25 @@ class DTGScript(scripts.Script):
             text_model.cuda()
         new_all_prompts = []
         for prompt, sub_seed in zip(p.all_prompts, p.all_seeds):
-            new_all_prompts.append(self._process(prompt, aspect_ratio, seed + sub_seed, *args))
+            new_all_prompts.append(
+                self._process(prompt, aspect_ratio, seed + sub_seed, *args)
+            )
 
+        hr_fix_enabled = getattr(p, "enable_hr", False)
+
+        if hr_fix_enabled:
+            if p.hr_prompt != p.prompt:
+                new_hr_prompts = []
+                for prompt, hr_prompt in zip(p.all_prompts, p.all_hr_prompts):
+                    if prompt == hr_prompt:
+                        new_hr_prompts.append(prompt)
+                    else:
+                        new_hr_prompts.append(hr_prompt)
+                p.all_hr_prompts = new_hr_prompts
+            else:
+                p.all_hr_prompts = new_all_prompts
         p.all_prompts = new_all_prompts
+
         if torch.cuda.is_available() and isinstance(text_model, torch.nn.Module):
             text_model.cpu()
             torch.cuda.empty_cache()
@@ -249,11 +266,9 @@ class DTGScript(scripts.Script):
         format: str,
         temperature: float,
     ):
-        logger.info(
-            f"Processing propmt: {prompt[:20]}...\n"
-            f"Processing with seed: {seed}"
-        )
-        set_seed(seed % SEED_MAX)
+        propmt_preview = prompt.replace("\n", " ")[:40]
+        logger.info(f"Processing propmt: {propmt_preview}...")
+        logger.info(f"Processing with seed: {seed}")
         prompt_without_extranet, res = parse_prompt(prompt)
         prompt_parse_strength = parse_prompt_attention(prompt_without_extranet)
 
@@ -291,6 +306,7 @@ class DTGScript(scripts.Script):
             top_k=100,
             max_new_tokens=256,
             max_retry=5,
+            seed=seed % SEED_MAX,
         ):
             pass
         tag_map["general"] += extra_tokens

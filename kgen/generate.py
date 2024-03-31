@@ -12,7 +12,12 @@ except:
         pass
 
 
-from transformers import GenerationConfig, PreTrainedModel, PreTrainedTokenizerBase
+from transformers import (
+    GenerationConfig,
+    PreTrainedModel,
+    PreTrainedTokenizerBase,
+    set_seed,
+)
 
 
 def generate(
@@ -35,8 +40,11 @@ def generate(
             top_k=top_k,
             max_tokens=max_new_tokens,
             repeat_penalty=repetition_penalty or 1,
+            seed=kwargs.get("seed", None),
         )
         return prompt + result["choices"][0]["text"]
+    if "seed" in kwargs:
+        set_seed(kwargs["seed"])
 
     torch.cuda.empty_cache()
     inputs = tokenizer(prompt, return_tensors="pt")
@@ -83,10 +91,12 @@ def tag_gen(
     top_k=100,
     max_new_tokens=256,
     max_retry=25,
+    seed=None,
 ):
     retry = max_retry
     llm_gen = ""
 
+    round = 0
     while True:
         llm_gen = generate(
             model=text_model,
@@ -102,7 +112,9 @@ def tag_gen(
             prompt_lookup_num_tokens=10,
             pad_token_id=tokenizer.eos_token_id,
             eos_token_id=tokenizer.eos_token_id,
+            seed=seed + round,
         )
+        round += 1
         llm_gen = llm_gen.replace("</s>", "").replace("<s>", "")
         extra = llm_gen.split("<|input_end|>")[-1].strip().strip(",")
         extra_tokens = list(
