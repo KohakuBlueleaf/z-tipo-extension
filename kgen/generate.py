@@ -6,7 +6,7 @@ import torch
 
 try:
     from llama_cpp import Llama
-except:
+except ImportError:
 
     class Llama:
         pass
@@ -96,7 +96,7 @@ def tag_gen(
     retry = max_retry
     llm_gen = ""
 
-    round = 0
+    iter_count = 0
     while True:
         llm_gen = generate(
             model=text_model,
@@ -112,9 +112,9 @@ def tag_gen(
             prompt_lookup_num_tokens=10,
             pad_token_id=tokenizer.eos_token_id,
             eos_token_id=tokenizer.eos_token_id,
-            seed=seed + round,
+            seed=seed + iter_count,
         )
-        round += 1
+        iter_count += 1
         llm_gen = llm_gen.replace("</s>", "").replace("<s>", "")
         extra = llm_gen.split("<|input_end|>")[-1].strip().strip(",")
         extra_tokens = list(

@@ -37,7 +37,7 @@ try:
         verbose=False,
     )
     logger.info("Llama-cpp-python/gguf model loaded")
-except:
+except Exception:
     logger.warning(
         "Llama-cpp-python/gguf model not found, using transformers to load model"
     )

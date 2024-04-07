@@ -28,15 +28,15 @@ def seperate_tags(all_tags):
     return tag_map
 
 
-def apply_format(tag_map, format):
+def apply_format(tag_map, form):
     for type in tag_map:
-        if f"<|{type}|>" in format:
+        if f"<|{type}|>" in form:
             if not tag_map[type]:
-                format = format.replace(f"<|{type}|>,", "")
-                format = format.replace(f"<|{type}|>", "")
+                form = form.replace(f"<|{type}|>,", "")
+                form = form.replace(f"<|{type}|>", "")
             else:
-                format = format.replace(f"<|{type}|>", ", ".join(tag_map[type]))
-    return format.strip().strip(",")
+                form = form.replace(f"<|{type}|>", ", ".join(tag_map[type]))
+    return form.strip().strip(",")
 
 
 def apply_dtg_prompt(tag_map, target="", aspect_ratio=1.0):
