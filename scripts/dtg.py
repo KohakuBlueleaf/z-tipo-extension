@@ -71,15 +71,24 @@ PROCESSING_TIMING = {
 class DTGScript(scripts.Script):
     def __init__(self):
         super().__init__()
+        self.orig_prompt_area = [None, None]
 
     def title(self):
         return "DanTagGen"
 
-    def show(self, is_img2img):
+    def show(self, _):
         return scripts.AlwaysVisible
 
+    def after_component(self, component, **kwargs):
+        val = kwargs.get("value", "")
+        elem_id = kwargs.get("elem_id", "") or ""
+        if elem_id == "txt2img_prompt":
+            self.orig_prompt_area[0] = component
+        elif elem_id == "img2img_prompt":
+            self.orig_prompt_area[1] = component
+
     def ui(self, is_img2img):
-        with gr.Accordion(open=False, label=self.title()):
+        with gr.Accordion(open=False, label=self.title()) as dtg_acc:
             with gr.Column():
                 enabled_check = gr.Checkbox(label="Enabled", value=False)
 
@@ -169,6 +178,19 @@ class DTGScript(scripts.Script):
                         value=1.35,
                     )
 
+        infotext_keys = ["DTG seed", "DTG tag length", "DTG ban tags", "DTG format", "DTG timing", "DTG temperature"]
+        self.infotext_fields = [
+            (dtg_acc, lambda d: gr.update(open=any(key in d for key in infotext_keys))),
+            (self.orig_prompt_area[is_img2img], lambda d: d.get("DTG original prompt", "")),
+            (enabled_check, lambda d: any(key in d for key in infotext_keys)),
+            (seed_num_input, lambda d: int(d.get("DTG seed", -1))),
+            (tag_length_radio, lambda d: d.get("DTG tag length", TOTAL_TAG_LENGTH["LONG"])),
+            (ban_tags_textbox, lambda d: d.get("DTG ban tags", "")),
+            (format_textarea, lambda d: d.get("DTG format", "")),
+            (process_timing_dropdown, lambda d: d.get("DTG timing", PROCESSING_TIMING["AFTER"])),
+            (temperature_slider, lambda d: float(d.get("DTG temperature", 1.35))),
+        ]
+
         return [
             enabled_check,
             process_timing_dropdown,
@@ -178,6 +200,22 @@ class DTGScript(scripts.Script):
             format_textarea,
             temperature_slider,
         ]
+
+    def write_infotext(
+        self, 
+        p: StableDiffusionProcessingTxt2Img | StableDiffusionProcessingImg2Img,
+        prompt: str,
+        process_timing: str,
+        seed: int,
+        *args,
+    ):
+        p.extra_generation_params["DTG original prompt"] = prompt
+        p.extra_generation_params["DTG seed"] = seed
+        p.extra_generation_params["DTG timing"] = process_timing
+        p.extra_generation_params["DTG tag length"] = args[0]
+        p.extra_generation_params["DTG ban tags"] = args[1]
+        p.extra_generation_params["DTG format"] = args[2]
+        p.extra_generation_params["DTG temperature"] = args[3]
 
     def process(
         self,
@@ -195,10 +233,14 @@ class DTGScript(scripts.Script):
         if process_timing != PROCESSING_TIMING["AFTER"]:
             return
 
+        self.original_prompt = p.all_prompts
+        self.original_hr_prompt = p.all_hr_prompts
         aspect_ratio = p.width / p.height
         if seed == -1:
             seed = random.randrange(2**31 - 1)
         seed = int(seed)
+
+        self.write_infotext(p, p.prompt, process_timing, seed, *args)
 
         if torch.cuda.is_available() and isinstance(text_model, torch.nn.Module):
             text_model.cuda()
@@ -243,9 +285,12 @@ class DTGScript(scripts.Script):
         if process_timing != PROCESSING_TIMING["BEFORE"]:
             return
 
+        self.original_prompt = p.prompt
+        self.original_hr_prompt = p.hr_prompt
         aspect_ratio = p.width / p.height
         if seed == -1:
             seed = random.randrange(4294967294)
+        self.write_infotext(p, p.prompt, process_timing, seed, *args)
         seed = int(seed + p.seed)
 
         if torch.cuda.is_available() and isinstance(text_model, torch.nn.Module):
@@ -323,3 +368,18 @@ class DTGScript(scripts.Script):
 
         logger.info("Prompt processing done.")
         return prompt_by_dtg + "\n" + rebuild_extranet
+
+    def postprocess_batch(
+        self,
+        p: StableDiffusionProcessingTxt2Img | StableDiffusionProcessingImg2Img,
+        *args,
+        batch_number,
+        **kwargs,
+    ):
+        current_range = slice(batch_number * p.batch_size, (batch_number + 1) * p.batch_size)
+        # if isinstance(self.original_prompt, list):
+        #     p.all_prompts[current_range] = self.original_prompt[current_range]
+        #     p.all_hr_prompts[current_range] = self.original_hr_prompt[current_range]
+        # else:
+        #     p.all_prompts[current_range] = [self.original_prompt for _ in range(p.batch_size)]
+        #     p.all_hr_prompts[current_range] = [self.original_hr_prompt for _ in range(p.batch_size)]
