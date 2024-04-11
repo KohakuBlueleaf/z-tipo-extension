@@ -152,7 +152,8 @@ class DTGScript(scripts.Script):
 
                         seed_random_btn.click(lambda: -1, outputs=[seed_num_input])
                         seed_shuffle_btn.click(
-                            lambda: random.randint(0, 2**31-1), outputs=[seed_num_input]
+                            lambda: random.randint(0, 2**31 - 1),
+                            outputs=[seed_num_input],
                         )
 
                 with gr.Group():
@@ -252,7 +253,7 @@ class DTGScript(scripts.Script):
 
         if process_timing != PROCESSING_TIMING["AFTER"]:
             return
- 
+
         self.original_prompt = p.all_prompts
         self.original_hr_prompt = p.all_hr_prompts
         aspect_ratio = p.width / p.height
@@ -392,7 +393,9 @@ class DTGScript(scripts.Script):
 
 def pares_infotext(_, params):
     try:
-        params["DTG Parameters"] = json.loads(params["DTG Parameters"].translate(QUOTESWAP))
+        params["DTG Parameters"] = json.loads(
+            params["DTG Parameters"].translate(QUOTESWAP)
+        )
     except Exception:
         pass
 
