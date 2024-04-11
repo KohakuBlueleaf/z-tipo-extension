@@ -110,8 +110,8 @@ def tag_gen(
             stream_output=False,
             autocast_gen=nullcontext,
             prompt_lookup_num_tokens=10,
-            pad_token_id=tokenizer.eos_token_id,
-            eos_token_id=tokenizer.eos_token_id,
+            pad_token_id=getattr(tokenizer, "eos_token_id", None),
+            eos_token_id=getattr(tokenizer, "eos_token_id", None),
             seed=seed + iter_count,
         )
         iter_count += 1
