@@ -1,4 +1,5 @@
 import os
+import json
 import random
 from functools import lru_cache
 
@@ -7,7 +8,7 @@ import gradio as gr
 from transformers import LlamaForCausalLM, LlamaTokenizer
 
 import modules.scripts as scripts
-from modules.scripts import basedir
+from modules.scripts import basedir, OnComponent
 from modules.processing import (
     StableDiffusionProcessingTxt2Img,
     StableDiffusionProcessingImg2Img,
@@ -20,8 +21,6 @@ from kgen.metainfo import TARGET
 from kgen.generate import tag_gen
 from kgen.logging import logger
 
-
-SEED_MAX = 2**31 - 1
 
 ext_dir = basedir()
 all_model_file = [f for f in os.listdir(ext_dir + "/models") if f.endswith(".gguf")]
@@ -48,30 +47,59 @@ except Exception:
 tokenizer = LlamaTokenizer.from_pretrained("KBlueLeaf/DanTagGen-beta")
 
 
+SEED_MAX = 2**31 - 1
+QUOTESWAP = str.maketrans("'\"", "\"'")
 TOTAL_TAG_LENGTH = {
     "VERY_SHORT": "very short",
     "SHORT": "short",
     "LONG": "long",
     "VERY_LONG": "very long",
 }
-
 TOTAL_TAG_LENGTH_TAGS = {
     TOTAL_TAG_LENGTH["VERY_SHORT"]: "<|very_short|>",
     TOTAL_TAG_LENGTH["SHORT"]: "<|short|>",
     TOTAL_TAG_LENGTH["LONG"]: "<|long|>",
     TOTAL_TAG_LENGTH["VERY_LONG"]: "<|very_long|>",
 }
-
 PROCESSING_TIMING = {
     "BEFORE": "Before applying other prompt processings",
     "AFTER": "After applying other prompt processings",
 }
+DEFAULT_FORMAT = """<|special|>, 
+<|characters|>, <|copyrights|>, 
+<|artist|>, 
+
+<|general|>, 
+
+<|quality|>, <|meta|>, <|rating|>"""
+TIMING_INFO_TEMPLATE = (
+    "_Prompt upsampling will be applied to {} "
+    "sd-dynamic-promps and the webui's styles feature are applied_"
+)
+
+
+def on_process_timing_dropdown_changed(timing: str):
+    info = ""
+    if timing == PROCESSING_TIMING["BEFORE"]:
+        info = "**only the first image in batch**, **before**"
+    elif timing == PROCESSING_TIMING["AFTER"]:
+        info = "**all images in batch**, **after**"
+    else:
+        raise Exception(f"Unknown timing: {timing}")
+    return TIMING_INFO_TEMPLATE.format(info)
 
 
 class DTGScript(scripts.Script):
     def __init__(self):
         super().__init__()
-        self.orig_prompt_area = [None, None]
+        self.prompt_area = [None, None]
+        self.on_after_component_elem_id = [
+            ("txt2img_prompt", lambda x: self.set_prompt_area(0, x)),
+            ("img2img_prompt", lambda x: self.set_prompt_area(1, x)),
+        ]
+
+    def set_prompt_area(self, i2i: int, component: OnComponent):
+        self.prompt_area[i2i] = component.component
 
     def title(self):
         return "DanTagGen"
@@ -106,13 +134,7 @@ class DTGScript(scripts.Script):
                 format_textarea = gr.TextArea(
                     label="Prompt Format",
                     info="The format you want to apply to final prompt",
-                    value="""<|special|>, 
-<|characters|>, <|copyrights|>, 
-<|artist|>, 
-
-<|general|>, 
-
-<|quality|>, <|meta|>, <|rating|>""",
+                    value=DEFAULT_FORMAT,
                 )
 
                 with gr.Group():
@@ -128,18 +150,9 @@ class DTGScript(scripts.Script):
                         seed_random_btn = gr.Button(value="Randomize")
                         seed_shuffle_btn = gr.Button(value="Shuffle")
 
-                        def click_random_seed_btn():
-                            return -1
-
-                        seed_random_btn.click(
-                            click_random_seed_btn, outputs=[seed_num_input]
-                        )
-
-                        def click_shuffle_seed_btn():
-                            return random.randint(0, 2**31 - 1)
-
+                        seed_random_btn.click(lambda: -1, outputs=[seed_num_input])
                         seed_shuffle_btn.click(
-                            click_shuffle_seed_btn, outputs=[seed_num_input]
+                            lambda: random.randint(0, 2**31-1), outputs=[seed_num_input]
                         )
 
                 with gr.Group():
@@ -148,13 +161,6 @@ class DTGScript(scripts.Script):
                         choices=list(PROCESSING_TIMING.values()),
                         value=PROCESSING_TIMING["AFTER"],
                     )
-
-                    def on_process_timing_dropdown_changed(timing: str):
-                        if timing == PROCESSING_TIMING["BEFORE"]:
-                            return "_Prompt upsampling will be applied to **only the first image in batch**, **before** sd-dynamic-promps and the webui's styles feature are applied_"
-                        elif timing == PROCESSING_TIMING["AFTER"]:
-                            return "_Prompt upsampling will be applied to **all images in batch**, **after** sd-dynamic-promps and the webui's styles feature are applied_"
-                        raise Exception(f"Unknown timing: {timing}")
 
                     process_timing_md = gr.Markdown(
                         on_process_timing_dropdown_changed(
@@ -178,17 +184,22 @@ class DTGScript(scripts.Script):
                         value=1.35,
                     )
 
-        infotext_keys = ["DTG seed", "DTG tag length", "DTG ban tags", "DTG format", "DTG timing", "DTG temperature"]
         self.infotext_fields = [
-            (dtg_acc, lambda d: gr.update(open=any(key in d for key in infotext_keys))),
-            (self.orig_prompt_area[is_img2img], lambda d: d.get("DTG original prompt", "")),
-            (enabled_check, lambda d: any(key in d for key in infotext_keys)),
-            (seed_num_input, lambda d: int(d.get("DTG seed", -1))),
-            (tag_length_radio, lambda d: d.get("DTG tag length", TOTAL_TAG_LENGTH["LONG"])),
-            (ban_tags_textbox, lambda d: d.get("DTG ban tags", "")),
-            (format_textarea, lambda d: d.get("DTG format", "")),
-            (process_timing_dropdown, lambda d: d.get("DTG timing", PROCESSING_TIMING["AFTER"])),
-            (temperature_slider, lambda d: float(d.get("DTG temperature", 1.35))),
+            (dtg_acc, lambda d: gr.update(open="DTG Parameters" in d)),
+            (
+                self.prompt_area[is_img2img],
+                lambda d: d.get("DTG prompt", ""),
+            ),
+            (enabled_check, lambda d: "DTG Parameters" in d),
+            (seed_num_input, lambda d: self.get_infotext(d, "seed", -1)),
+            (tag_length_radio, lambda d: self.get_infotext(d, "tag_length", "long")),
+            (ban_tags_textbox, lambda d: self.get_infotext(d, "ban_tags", "")),
+            (format_textarea, lambda d: d.get("DTG format", DEFAULT_FORMAT)),
+            (
+                process_timing_dropdown,
+                lambda d: PROCESSING_TIMING[self.get_infotext(d, "timing", "AFTER")],
+            ),
+            (temperature_slider, lambda d: self.get_infotext(d, "temperature", 1.35)),
         ]
 
         return [
@@ -201,21 +212,30 @@ class DTGScript(scripts.Script):
             temperature_slider,
         ]
 
+    def get_infotext(self, d, target, default):
+        return d.get("DanTagGen", {}).get(target, default)
+
     def write_infotext(
-        self, 
+        self,
         p: StableDiffusionProcessingTxt2Img | StableDiffusionProcessingImg2Img,
         prompt: str,
         process_timing: str,
         seed: int,
         *args,
     ):
-        p.extra_generation_params["DTG original prompt"] = prompt
-        p.extra_generation_params["DTG seed"] = seed
-        p.extra_generation_params["DTG timing"] = process_timing
-        p.extra_generation_params["DTG tag length"] = args[0]
-        p.extra_generation_params["DTG ban tags"] = args[1]
-        p.extra_generation_params["DTG format"] = args[2]
-        p.extra_generation_params["DTG temperature"] = args[3]
+        p.extra_generation_params["DTG Parameters"] = json.dumps(
+            {
+                "seed": seed,
+                "timing": process_timing,
+                "tag_length": args[0],
+                "ban_tags": args[1],
+                "temperature": args[3],
+            },
+            ensure_ascii=False,
+        ).translate(QUOTESWAP)
+        p.extra_generation_params["DTG prompt"] = prompt
+        if args[2] != DEFAULT_FORMAT:
+            p.extra_generation_params["DTG format"] = args[2]
 
     def process(
         self,
@@ -232,7 +252,7 @@ class DTGScript(scripts.Script):
 
         if process_timing != PROCESSING_TIMING["AFTER"]:
             return
-
+ 
         self.original_prompt = p.all_prompts
         self.original_hr_prompt = p.all_hr_prompts
         aspect_ratio = p.width / p.height
@@ -240,7 +260,7 @@ class DTGScript(scripts.Script):
             seed = random.randrange(2**31 - 1)
         seed = int(seed)
 
-        self.write_infotext(p, p.prompt, process_timing, seed, *args)
+        self.write_infotext(p, p.prompt, "AFTER", seed, *args)
 
         if torch.cuda.is_available() and isinstance(text_model, torch.nn.Module):
             text_model.cuda()
@@ -290,7 +310,7 @@ class DTGScript(scripts.Script):
         aspect_ratio = p.width / p.height
         if seed == -1:
             seed = random.randrange(4294967294)
-        self.write_infotext(p, p.prompt, process_timing, seed, *args)
+        self.write_infotext(p, p.prompt, "BEFORE", seed, *args)
         seed = int(seed + p.seed)
 
         if torch.cuda.is_available() and isinstance(text_model, torch.nn.Module):
@@ -369,17 +389,12 @@ class DTGScript(scripts.Script):
         logger.info("Prompt processing done.")
         return prompt_by_dtg + "\n" + rebuild_extranet
 
-    def postprocess_batch(
-        self,
-        p: StableDiffusionProcessingTxt2Img | StableDiffusionProcessingImg2Img,
-        *args,
-        batch_number,
-        **kwargs,
-    ):
-        current_range = slice(batch_number * p.batch_size, (batch_number + 1) * p.batch_size)
-        # if isinstance(self.original_prompt, list):
-        #     p.all_prompts[current_range] = self.original_prompt[current_range]
-        #     p.all_hr_prompts[current_range] = self.original_hr_prompt[current_range]
-        # else:
-        #     p.all_prompts[current_range] = [self.original_prompt for _ in range(p.batch_size)]
-        #     p.all_hr_prompts[current_range] = [self.original_hr_prompt for _ in range(p.batch_size)]
+
+def pares_infotext(_, params):
+    try:
+        params["DTG Parameters"] = json.loads(params["DTG Parameters"].translate(QUOTESWAP))
+    except Exception:
+        pass
+
+
+scripts.script_callbacks.on_infotext_pasted(pares_infotext)
