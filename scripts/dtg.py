@@ -35,6 +35,7 @@ try:
         n_gpu_layers=100,
         verbose=False,
     )
+    tokenizer = None
     logger.info("Llama-cpp-python/gguf model loaded")
 except Exception:
     logger.warning(
@@ -44,7 +45,7 @@ except Exception:
     text_model = (
         LlamaForCausalLM.from_pretrained("KBlueLeaf/DanTagGen-beta").eval().half()
     )
-tokenizer = LlamaTokenizer.from_pretrained("KBlueLeaf/DanTagGen-beta")
+    tokenizer = LlamaTokenizer.from_pretrained("KBlueLeaf/DanTagGen-beta")
 
 
 SEED_MAX = 2**31 - 1
