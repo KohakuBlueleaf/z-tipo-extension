@@ -76,6 +76,9 @@ TIMING_INFO_TEMPLATE = (
     "_Prompt upsampling will be applied to {} "
     "sd-dynamic-promps and the webui's styles feature are applied_"
 )
+INFOTEXT_KEY = "DTG Parameters"
+INFOTEXT_KEY_PROMPT = "DTG prompt"
+INFOTEXT_KEY_FORMAT = "DTG format"
 
 
 def on_process_timing_dropdown_changed(timing: str):
@@ -178,16 +181,16 @@ class DTGScript(scripts.Script):
                     )
 
         self.infotext_fields = [
-            (dtg_acc, lambda d: gr.update(open="DTG Parameters" in d)),
+            (dtg_acc, lambda d: gr.update(open=INFOTEXT_KEY in d)),
             (
                 self.prompt_area[is_img2img],
-                lambda d: d.get("DTG prompt", ""),
+                lambda d: d.get(INFOTEXT_KEY_PROMPT, ""),
             ),
-            (enabled_check, lambda d: "DTG Parameters" in d),
+            (enabled_check, lambda d: INFOTEXT_KEY in d),
             (seed_num_input, lambda d: self.get_infotext(d, "seed", -1)),
             (tag_length_radio, lambda d: self.get_infotext(d, "tag_length", "long")),
             (ban_tags_textbox, lambda d: self.get_infotext(d, "ban_tags", "")),
-            (format_textarea, lambda d: d.get("DTG format", DEFAULT_FORMAT)),
+            (format_textarea, lambda d: d.get(INFOTEXT_KEY_FORMAT, DEFAULT_FORMAT)),
             (
                 process_timing_dropdown,
                 lambda d: PROCESSING_TIMING[self.get_infotext(d, "timing", "AFTER")],
@@ -206,7 +209,7 @@ class DTGScript(scripts.Script):
         ]
 
     def get_infotext(self, d, target, default):
-        return d.get("DTG Parameters", {}).get(target, default)
+        return d.get(INFOTEXT_KEY, {}).get(target, default)
 
     def write_infotext(
         self,
@@ -216,7 +219,7 @@ class DTGScript(scripts.Script):
         seed: int,
         *args,
     ):
-        p.extra_generation_params["DTG Parameters"] = json.dumps(
+        p.extra_generation_params[INFOTEXT_KEY] = json.dumps(
             {
                 "seed": seed,
                 "timing": process_timing,
@@ -226,9 +229,9 @@ class DTGScript(scripts.Script):
             },
             ensure_ascii=False,
         ).translate(QUOTESWAP)
-        p.extra_generation_params["DTG prompt"] = prompt
+        p.extra_generation_params[INFOTEXT_KEY_PROMPT] = prompt
         if args[2] != DEFAULT_FORMAT:
-            p.extra_generation_params["DTG format"] = args[2]
+            p.extra_generation_params[INFOTEXT_KEY_FORMAT] = args[2]
 
     def process(
         self,
