@@ -206,7 +206,7 @@ class DTGScript(scripts.Script):
         ]
 
     def get_infotext(self, d, target, default):
-        return d.get("DanTagGen", {}).get(target, default)
+        return d.get("DTG Parameters", {}).get(target, default)
 
     def write_infotext(
         self,
