@@ -97,7 +97,7 @@ def tag_gen(
     llm_gen = ""
 
     iter_count = 0
-    while True:
+    while retry >= 0:
         llm_gen = generate(
             model=text_model,
             tokenizer=tokenizer,
