@@ -5,7 +5,6 @@ from functools import lru_cache
 
 import torch
 import gradio as gr
-from transformers import LlamaForCausalLM, LlamaTokenizer
 
 import modules.scripts as scripts
 from modules.scripts import basedir, OnComponent
@@ -42,6 +41,7 @@ except Exception:
         "Llama-cpp-python/gguf model not found, using transformers to load model"
     )
 
+    from transformers import LlamaForCausalLM, LlamaTokenizer
     text_model = (
         LlamaForCausalLM.from_pretrained("KBlueLeaf/DanTagGen-beta").eval().half()
     )
