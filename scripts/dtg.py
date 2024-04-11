@@ -107,14 +107,6 @@ class DTGScript(scripts.Script):
     def show(self, _):
         return scripts.AlwaysVisible
 
-    def after_component(self, component, **kwargs):
-        val = kwargs.get("value", "")
-        elem_id = kwargs.get("elem_id", "") or ""
-        if elem_id == "txt2img_prompt":
-            self.orig_prompt_area[0] = component
-        elif elem_id == "img2img_prompt":
-            self.orig_prompt_area[1] = component
-
     def ui(self, is_img2img):
         with gr.Accordion(open=False, label=self.title()) as dtg_acc:
             with gr.Column():
