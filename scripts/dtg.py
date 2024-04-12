@@ -185,7 +185,7 @@ class DTGScript(scripts.Script):
             (dtg_acc, lambda d: gr.update(open=INFOTEXT_KEY in d)),
             (
                 self.prompt_area[is_img2img],
-                lambda d: d.get(INFOTEXT_KEY_PROMPT, ""),
+                lambda d: d.get(INFOTEXT_KEY_PROMPT, self.prompt_area.value),
             ),
             (enabled_check, lambda d: INFOTEXT_KEY in d),
             (seed_num_input, lambda d: self.get_infotext(d, "seed", -1)),
