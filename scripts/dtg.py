@@ -42,6 +42,7 @@ except Exception:
     )
 
     from transformers import LlamaForCausalLM, LlamaTokenizer
+
     text_model = (
         LlamaForCausalLM.from_pretrained("KBlueLeaf/DanTagGen-beta").eval().half()
     )
@@ -81,6 +82,15 @@ INFOTEXT_KEY = "DTG Parameters"
 INFOTEXT_KEY_PROMPT = "DTG prompt"
 INFOTEXT_KEY_FORMAT = "DTG format"
 
+PROMPT_INDICATE_HTML = """
+<div style="height: 100%; width: 100%; display: flex; justify-content: center; align-items: center">
+    <span>
+        Original Prompt Loaded.<br>
+        Click "Apply" to apply the original prompt.
+    </span>
+</div>
+"""
+
 
 def on_process_timing_dropdown_changed(timing: str):
     info = ""
@@ -114,7 +124,35 @@ class DTGScript(scripts.Script):
     def ui(self, is_img2img):
         with gr.Accordion(open=False, label=self.title()) as dtg_acc:
             with gr.Column():
-                enabled_check = gr.Checkbox(label="Enabled", value=False)
+                with gr.Row():
+                    with gr.Column(scale=1):
+                        enabled_check = gr.Checkbox(
+                            label="Enabled", value=False, min_width=20
+                        )
+                        read_orig_prompt_btn = gr.Button(
+                            size="sm",
+                            value="Apply original prompt",
+                            visible=False,
+                            min_width=20,
+                        )
+                    with gr.Column(scale=3):
+                        orig_prompt_area = gr.TextArea(visible=False)
+                        orig_prompt_light = gr.HTML("")
+                    orig_prompt_area.change(
+                        lambda x: PROMPT_INDICATE_HTML * bool(x),
+                        inputs=orig_prompt_area,
+                        outputs=orig_prompt_light,
+                    )
+                    orig_prompt_area.change(
+                        lambda x: gr.update(visible=bool(x)),
+                        inputs=orig_prompt_area,
+                        outputs=read_orig_prompt_btn,
+                    )
+                    read_orig_prompt_btn.click(
+                        fn=lambda x: x,
+                        inputs=[orig_prompt_area],
+                        outputs=self.prompt_area[is_img2img],
+                    )
 
                 tag_length_radio = gr.Radio(
                     label="Total tag length",
@@ -187,6 +225,7 @@ class DTGScript(scripts.Script):
                 self.prompt_area[is_img2img],
                 lambda d: d.get(INFOTEXT_KEY_PROMPT, d["Prompt"]),
             ),
+            (orig_prompt_area, lambda d: d["Prompt"]),
             (enabled_check, lambda d: INFOTEXT_KEY in d),
             (seed_num_input, lambda d: self.get_infotext(d, "seed", -1)),
             (tag_length_radio, lambda d: self.get_infotext(d, "tag_length", "long")),
