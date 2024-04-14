@@ -90,14 +90,17 @@ def tag_gen(
     top_p=0.95,
     top_k=100,
     max_new_tokens=256,
-    max_retry=100,
+    max_retry=25,
+    max_same_output=5,
     seed=None,
 ):
     retry = max_retry
     llm_gen = ""
 
     iter_count = 0
-    while retry >= 0:
+    prev_output = set()
+    same_output_count = 0
+    while retry >= 0 and same_output_count < max_same_output:
         llm_gen = generate(
             model=text_model,
             tokenizer=tokenizer,
@@ -116,6 +119,7 @@ def tag_gen(
         )
         iter_count += 1
         llm_gen = llm_gen.replace("</s>", "").replace("<s>", "")
+        orig_prompt = llm_gen.split("<|input_end|>")[0]
         extra = llm_gen.split("<|input_end|>")[-1].strip().strip(",")
         extra_tokens = list(
             set(
@@ -130,9 +134,17 @@ def tag_gen(
 
         yield llm_gen, extra_tokens
 
+        if set(extra_tokens) == prev_output:
+            same_output_count += 1
+            retry += 1
+        else:
+            same_output_count = 0
+            prev_output = set(extra_tokens)
+
         if len(prompt_tags) + len(extra_tokens) < len_target:
             retry -= 1
             shuffle(extra_tokens)
+            llm_gen = f"{orig_prompt}<|input_end|>{', '.join(extra_tokens)}"
             prompt = llm_gen.strip().replace("  <|", " <|")
         else:
             break
