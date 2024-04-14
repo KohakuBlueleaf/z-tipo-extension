@@ -90,7 +90,7 @@ def tag_gen(
     top_p=0.95,
     top_k=100,
     max_new_tokens=256,
-    max_retry=10,
+    max_retry=100,
     seed=None,
 ):
     retry = max_retry
