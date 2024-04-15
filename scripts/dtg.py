@@ -44,9 +44,9 @@ except Exception:
     from transformers import LlamaForCausalLM, LlamaTokenizer
 
     text_model = (
-        LlamaForCausalLM.from_pretrained("KBlueLeaf/DanTagGen-beta").eval().half()
+        LlamaForCausalLM.from_pretrained("KBlueLeaf/DanTagGen-gamma").eval().half()
     )
-    tokenizer = LlamaTokenizer.from_pretrained("KBlueLeaf/DanTagGen-beta")
+    tokenizer = LlamaTokenizer.from_pretrained("KBlueLeaf/DanTagGen-gamma")
 
 
 SEED_MAX = 2**31 - 1
