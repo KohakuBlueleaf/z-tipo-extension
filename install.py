@@ -33,4 +33,16 @@ def install_llama_cpp():
     )
 
 
+def install_tipo_kgen():
+    version = get_installed_version("tipo-kgen")
+    if version is not None and version >= "0.0.3":
+        return
+    print("Attempting to install tipo_kgen")
+    launch.run_pip(
+        f"install -U tipo-kgen>=0.0.3",
+        f"tipo-kgen for DanTagGen",
+    )
+
+
 install_llama_cpp()
+install_tipo_kgen()

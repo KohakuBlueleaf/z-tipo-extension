@@ -1,5 +1,7 @@
 import os
+import itertools
 import json
+import pathlib
 import random
 from functools import lru_cache
 
@@ -7,6 +9,7 @@ import torch
 import gradio as gr
 
 import modules.scripts as scripts
+from modules import devices
 from modules.scripts import basedir, OnComponent
 from modules.processing import (
     StableDiffusionProcessingTxt2Img,
@@ -15,6 +18,7 @@ from modules.processing import (
 from modules.prompt_parser import parse_prompt_attention
 from modules.extra_networks import parse_prompt
 
+import kgen.models as models
 from kgen.formatter import seperate_tags, apply_format, apply_dtg_prompt
 from kgen.metainfo import TARGET
 from kgen.generate import tag_gen
@@ -22,31 +26,7 @@ from kgen.logging import logger
 
 
 ext_dir = basedir()
-all_model_file = [f for f in os.listdir(ext_dir + "/models") if f.endswith(".gguf")]
-
-
-try:
-    from llama_cpp import Llama
-
-    text_model = Llama(
-        os.path.join(ext_dir, "models", all_model_file[-1]),
-        n_ctx=384,
-        n_gpu_layers=100,
-        verbose=False,
-    )
-    tokenizer = None
-    logger.info("Llama-cpp-python/gguf model loaded")
-except Exception:
-    logger.warning(
-        "Llama-cpp-python/gguf model not found, using transformers to load model"
-    )
-
-    from transformers import LlamaForCausalLM, LlamaTokenizer
-
-    text_model = (
-        LlamaForCausalLM.from_pretrained("KBlueLeaf/DanTagGen-gamma").eval().half()
-    )
-    tokenizer = LlamaTokenizer.from_pretrained("KBlueLeaf/DanTagGen-gamma")
+models.model_dir = pathlib.Path(ext_dir) / "models"
 
 
 SEED_MAX = 2**31 - 1
@@ -107,6 +87,7 @@ class DTGScript(scripts.Script):
     def __init__(self):
         super().__init__()
         self.prompt_area = [None, None]
+        self.current_model = None
         self.on_after_component_elem_id = [
             ("txt2img_prompt", lambda x: self.set_prompt_area(0, x)),
             ("img2img_prompt", lambda x: self.set_prompt_area(1, x)),
@@ -210,6 +191,17 @@ class DTGScript(scripts.Script):
                     )
 
                 with gr.Accordion(label="Generation config", open=False):
+                    model_dropdown = gr.Dropdown(
+                        label="Model",
+                        choices=models.model_list
+                        + [
+                            f"{model} | {file}"
+                            for model, file in itertools.product(
+                                models.model_list, models.gguf_name
+                            )
+                        ],
+                        value=models.model_list[-1],
+                    )
                     temperature_slider = gr.Slider(
                         label="Temperature",
                         info="← less random | more random →",
@@ -236,6 +228,12 @@ class DTGScript(scripts.Script):
                 lambda d: PROCESSING_TIMING[self.get_infotext(d, "timing", "AFTER")],
             ),
             (temperature_slider, lambda d: self.get_infotext(d, "temperature", 1.35)),
+            (
+                model_dropdown,
+                lambda d: self.get_infotext(
+                    d, "model", getattr(self, "current_model") or models.model_list[-1]
+                ),
+            ),
         ]
 
         return [
@@ -246,6 +244,7 @@ class DTGScript(scripts.Script):
             ban_tags_textbox,
             format_textarea,
             temperature_slider,
+            model_dropdown,
         ]
 
     def get_infotext(self, d, target, default):
@@ -266,6 +265,7 @@ class DTGScript(scripts.Script):
                 "tag_length": args[0],
                 "ban_tags": args[1],
                 "temperature": args[3],
+                "model": args[4],
             },
             ensure_ascii=False,
         ).translate(QUOTESWAP)
@@ -298,8 +298,6 @@ class DTGScript(scripts.Script):
 
         self.write_infotext(p, p.prompt, "AFTER", seed, *args)
 
-        if torch.cuda.is_available() and isinstance(text_model, torch.nn.Module):
-            text_model.cuda()
         new_all_prompts = []
         for prompt, sub_seed in zip(p.all_prompts, p.all_seeds):
             new_all_prompts.append(
@@ -320,10 +318,6 @@ class DTGScript(scripts.Script):
             else:
                 p.all_hr_prompts = new_all_prompts
         p.all_prompts = new_all_prompts
-
-        if torch.cuda.is_available() and isinstance(text_model, torch.nn.Module):
-            text_model.cpu()
-            torch.cuda.empty_cache()
 
     def before_process(
         self,
@@ -349,12 +343,7 @@ class DTGScript(scripts.Script):
         self.write_infotext(p, p.prompt, "BEFORE", seed, *args)
         seed = int(seed + p.seed)
 
-        if torch.cuda.is_available() and isinstance(text_model, torch.nn.Module):
-            text_model.cuda()
         p.prompt = self._process(p.prompt, aspect_ratio, seed, *args)
-        if torch.cuda.is_available() and isinstance(text_model, torch.nn.Module):
-            text_model.cpu()
-            torch.cuda.empty_cache()
 
     @lru_cache(128)
     def _process(
@@ -366,7 +355,21 @@ class DTGScript(scripts.Script):
         ban_tags: str,
         format: str,
         temperature: float,
+        model: str,
     ):
+        if model != self.current_model:
+            if " | " in model:
+                model_name, gguf_name = model.split(" | ")
+                target_file = f"{model_name.split('/')[-1]}_{gguf_name}"
+                if str(models.model_dir / target_file) not in models.list_gguf():
+                    models.download_gguf(model_name, gguf_name)
+                target = os.path.join(str(models.model_dir), target_file)
+                gguf = True
+            else:
+                target = model
+                gguf = False
+            models.load_model(target, gguf)
+            self.current_model = model
         propmt_preview = prompt.replace("\n", " ")[:40]
         logger.info(f"Processing propmt: {propmt_preview}...")
         logger.info(f"Processing with seed: {seed}")
@@ -395,9 +398,12 @@ class DTGScript(scripts.Script):
 
         tag_map = seperate_tags(all_tags)
         dtg_prompt = apply_dtg_prompt(tag_map, tag_length, aspect_ratio)
-        for llm_gen, extra_tokens in tag_gen(
-            text_model,
-            tokenizer,
+
+        if isinstance(models.text_model, torch.nn.Module):
+            models.text_model.to(devices.device)
+        for _, extra_tokens, _ in tag_gen(
+            models.text_model,
+            models.tokenizer,
             dtg_prompt,
             tag_map["special"] + tag_map["general"],
             len_target,
@@ -406,10 +412,14 @@ class DTGScript(scripts.Script):
             top_p=0.95,
             top_k=100,
             max_new_tokens=256,
-            max_retry=5,
+            max_retry=20,
+            max_same_output=15,
             seed=seed % SEED_MAX,
         ):
             pass
+        if isinstance(models.text_model, torch.nn.Module):
+            models.text_model.cpu()
+            devices.torch_gc()
         tag_map["general"] += extra_tokens
         for cate in tag_map.keys():
             new_list = []
