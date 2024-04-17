@@ -38,16 +38,11 @@ After install it into the sd-webui or sd-webui-forge. Just enable it in the acor
 * Temperature: Higher = more dynamic result, Lower = better coherence between tags.
 
 ## Example
-![image](https://github.com/KohakuBlueleaf/a1111-sd-webui-dtg/assets/59680068/49ef74f7-5943-4ef4-83f2-2cdc34850df8)
+![image](https://github.com/KohakuBlueleaf/z-a1111-sd-webui-dtg/assets/59680068/e45995c6-561f-4068-b78c-eeffaf4f9e5f)
 
 
 ## Faster inference
 
-If you think the transformers implementation is slow and want to get better speed. You can install `llama-cpp-python` by yourself and then download the gguf model from HuggingFace and them put them into the `models` folder.
+If you think the transformers implementation is slow and want to get better speed. You can download the gguf model from HuggingFace and them put them into the `models` folder under extension dir.
 
-(Automatic installation/download script for llama-cpp-python and gguf model are WIP)
-
-More information about `llama-cpp-python`:
-
-* [abetlen/llama-cpp-python: Python bindings for llama.cpp (github.com)](https://github.com/abetlen/llama-cpp-python)
-* [jllllll/llama-cpp-python-cuBLAS-wheels: Wheels for llama-cpp-python compiled with cuBLAS support (github.com)](https://github.com/jllllll/llama-cpp-python-cuBLAS-wheels)
+(Automatic download script for gguf model are WIP)
