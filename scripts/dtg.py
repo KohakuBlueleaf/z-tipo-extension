@@ -379,8 +379,12 @@ class DTGScript(scripts.Script):
         black_list = [tag.strip() for tag in ban_tags.split(",") if tag.strip()]
         all_tags = []
         strength_map = {}
+        break_map = set()
         for part, strength in prompt_parse_strength:
             part_tags = [tag.strip() for tag in part.strip().split(",") if tag.strip()]
+            if part == "BREAK" and strength == -1:
+                break_map.add(all_tags[-1])
+                continue
             all_tags.extend(part_tags)
             if strength == 1:
                 continue
@@ -423,8 +427,10 @@ class DTGScript(scripts.Script):
                     new_list.append(f"({tag}:{strength_map[tag]})")
                 else:
                     new_list.append(tag)
+                if tag in break_map:
+                    new_list.append("BREAK")
             tag_map[cate] = new_list
-        prompt_by_dtg = apply_format(tag_map, format)
+        prompt_by_dtg = apply_format(tag_map, format).replace("BREAK,", "BREAK")
 
         logger.info("Prompt processing done.")
         return prompt_by_dtg + "\n" + rebuild_extranet
