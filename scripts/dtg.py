@@ -37,12 +37,6 @@ TOTAL_TAG_LENGTH = {
     "LONG": "long",
     "VERY_LONG": "very long",
 }
-TOTAL_TAG_LENGTH_TAGS = {
-    TOTAL_TAG_LENGTH["VERY_SHORT"]: "<|very_short|>",
-    TOTAL_TAG_LENGTH["SHORT"]: "<|short|>",
-    TOTAL_TAG_LENGTH["LONG"]: "<|long|>",
-    TOTAL_TAG_LENGTH["VERY_LONG"]: "<|very_long|>",
-}
 PROCESSING_TIMING = {
     "BEFORE": "Before applying other prompt processings",
     "AFTER": "After applying other prompt processings",
