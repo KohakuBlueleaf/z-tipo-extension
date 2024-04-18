@@ -64,6 +64,13 @@ PROMPT_INDICATE_HTML = """
     </span>
 </div>
 """
+RECOMMEND_MARKDOWN = """
+### Rcommended Model and Settings:
+- Model: DanTagGen-beta
+    - gguf quant: Q8 or f16
+- Settings:
+    - Temperature: 1.2~1.5
+"""
 
 
 def on_process_timing_dropdown_changed(timing: str):
@@ -185,6 +192,7 @@ class DTGScript(scripts.Script):
                     )
 
                 with gr.Accordion(label="Generation config", open=False):
+                    gr.Markdown(RECOMMEND_MARKDOWN)
                     model_dropdown = gr.Dropdown(
                         label="Model",
                         choices=models.model_list
