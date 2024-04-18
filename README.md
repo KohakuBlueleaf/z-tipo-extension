@@ -6,7 +6,6 @@ It can generate the detail tags/core tags about the character you put in the pro
 
 **an extra z is added to repo name to ensure this extension will run `process()` after other extensions**
 
-
 ## What is DanTagGen
 
 DanTagGen(Danbooru Tag Generator) is a LLM model designed for generating Danboou Tags with provided informations.
@@ -15,7 +14,6 @@ It aims to provide user a more convinient way to make prompts for Text2Image mod
 More information about model arch and training data can be found in the HuggingFace Model card:
 
 [KBlueLeaf/DanTagGen-beta · Hugging Face](https://huggingface.co/KBlueLeaf/DanTagGen-beta)
-
 
 ## How to use it
 
@@ -38,11 +36,11 @@ After install it into the sd-webui or sd-webui-forge. Just enable it in the acor
 * Temperature: Higher = more dynamic result, Lower = better coherence between tags.
 
 ## Example
-![image](https://github.com/KohakuBlueleaf/z-a1111-sd-webui-dtg/assets/59680068/e45995c6-561f-4068-b78c-eeffaf4f9e5f)
 
+![image](https://github.com/KohakuBlueleaf/z-a1111-sd-webui-dtg/assets/59680068/e45995c6-561f-4068-b78c-eeffaf4f9e5f)
 
 ## Faster inference
 
-If you think the transformers implementation is slow and want to get better speed. You can download the gguf model from HuggingFace and them put them into the `models` folder under extension dir.
+You can now select models in Generation config accordion. The script will automatically download the selected models if it is not existed. (Include gguf model.)
 
-(Automatic download script for gguf model are WIP)
+If you want to download the gguf model by yourself, you need to rename it to `<Model Name>_<GGUF Name>` for example: `DanTagGen-gamma_ggml-model-Q6_K.gguf`
