@@ -67,10 +67,12 @@ PROMPT_INDICATE_HTML = """
 RECOMMEND_MARKDOWN = """
 ### Rcommended Model and Settings:
 - Model: DanTagGen-beta
-- Settings:
     - gguf quant: Q8 or f16
     - gguf device: cpu (cuda have reproducibility issue)
-    - Temperature: 1.2~1.5
+- Settings:
+    - Temperature: 1.2 ~ 1.5
+    - Top P: 0.8 ~ 0.95
+    - Top K: 60 ~ 100
 """
 
 
@@ -214,6 +216,22 @@ class DTGScript(scripts.Script):
                         step=0.05,
                         value=1.35,
                     )
+                    top_p_slider = gr.Slider(
+                        label="Top-p",
+                        info="← less unconfident tokens | more unconfident tokens →",
+                        maximum=1,
+                        minimum=0,
+                        step=0.05,
+                        value=0.95,
+                    )
+                    top_k_slider = gr.Slider(
+                        label="Top-k",
+                        info="← less unconfident tokens | more unconfident tokens →",
+                        maximum=200,
+                        minimum=0,
+                        step=1,
+                        value=100,
+                    )
 
         self.infotext_fields = [
             (dtg_acc, lambda d: gr.update(open=INFOTEXT_KEY in d)),
@@ -232,6 +250,8 @@ class DTGScript(scripts.Script):
                 lambda d: PROCESSING_TIMING[self.get_infotext(d, "timing", "AFTER")],
             ),
             (temperature_slider, lambda d: self.get_infotext(d, "temperature", 1.35)),
+            (top_p_slider, lambda d: self.get_infotext(d, "top_p", 0.95)),
+            (top_k_slider, lambda d: self.get_infotext(d, "top_k", 100)),
             (
                 model_dropdown,
                 lambda d: self.get_infotext(
@@ -249,6 +269,8 @@ class DTGScript(scripts.Script):
             ban_tags_textbox,
             format_textarea,
             temperature_slider,
+            top_p_slider,
+            top_k_slider,
             model_dropdown,
             gguf_use_cpu,
         ]
@@ -271,8 +293,10 @@ class DTGScript(scripts.Script):
                 "tag_length": args[0],
                 "ban_tags": args[1],
                 "temperature": args[3],
-                "model": args[4],
-                "gguf_cpu": args[5],
+                "top_p": args[4],
+                "top_k": args[5],
+                "model": args[6],
+                "gguf_cpu": args[7],
             },
             ensure_ascii=False,
         ).translate(QUOTESWAP)
@@ -362,6 +386,8 @@ class DTGScript(scripts.Script):
         ban_tags: str,
         format: str,
         temperature: float,
+        top_p: float,
+        top_k: int,
         model: str,
         gguf_use_cpu: bool,
     ):
@@ -413,7 +439,7 @@ class DTGScript(scripts.Script):
 
         if isinstance(models.text_model, torch.nn.Module):
             models.text_model.to(devices.device)
-        for _, extra_tokens, _ in tag_gen(
+        for _, extra_tokens, iter_count in tag_gen(
             models.text_model,
             models.tokenizer,
             dtg_prompt,
@@ -421,9 +447,9 @@ class DTGScript(scripts.Script):
             len_target,
             black_list,
             temperature=temperature,
-            top_p=0.95,
-            top_k=100,
-            max_new_tokens=256,
+            top_p=top_p,
+            top_k=top_k,
+            max_new_tokens=512,
             max_retry=20,
             max_same_output=15,
             seed=seed % SEED_MAX,
@@ -433,6 +459,10 @@ class DTGScript(scripts.Script):
             models.text_model.cpu()
             devices.torch_gc()
         tag_map["general"] += extra_tokens
+        logger.info(
+            f"Total general tags: {len(tag_map['general']+tag_map['special'])} | "
+            f"Total iterations: {iter_count}"
+        )
         for cate in tag_map.keys():
             new_list = []
             for tag in tag_map[cate]:
