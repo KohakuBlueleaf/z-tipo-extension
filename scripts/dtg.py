@@ -67,8 +67,9 @@ PROMPT_INDICATE_HTML = """
 RECOMMEND_MARKDOWN = """
 ### Rcommended Model and Settings:
 - Model: DanTagGen-beta
-    - gguf quant: Q8 or f16
 - Settings:
+    - gguf quant: Q8 or f16
+    - gguf device: cpu (cuda have reproducibility issue)
     - Temperature: 1.2~1.5
 """
 
@@ -204,6 +205,7 @@ class DTGScript(scripts.Script):
                         ],
                         value=models.model_list[-1],
                     )
+                    gguf_use_cpu = gr.Checkbox(label="Use CPU (GGUF)")
                     temperature_slider = gr.Slider(
                         label="Temperature",
                         info="← less random | more random →",
@@ -236,6 +238,7 @@ class DTGScript(scripts.Script):
                     d, "model", getattr(self, "current_model") or models.model_list[-1]
                 ),
             ),
+            (gguf_use_cpu, lambda d: self.get_infotext(d, "gguf_cpu", False)),
         ]
 
         return [
@@ -247,6 +250,7 @@ class DTGScript(scripts.Script):
             format_textarea,
             temperature_slider,
             model_dropdown,
+            gguf_use_cpu,
         ]
 
     def get_infotext(self, d, target, default):
@@ -268,6 +272,7 @@ class DTGScript(scripts.Script):
                 "ban_tags": args[1],
                 "temperature": args[3],
                 "model": args[4],
+                "gguf_cpu": args[5],
             },
             ensure_ascii=False,
         ).translate(QUOTESWAP)
@@ -358,6 +363,7 @@ class DTGScript(scripts.Script):
         format: str,
         temperature: float,
         model: str,
+        gguf_use_cpu: bool,
     ):
         if model != self.current_model:
             if " | " in model:
@@ -370,7 +376,7 @@ class DTGScript(scripts.Script):
             else:
                 target = model
                 gguf = False
-            models.load_model(target, gguf)
+            models.load_model(target, gguf, device="cpu" if gguf_use_cpu else "cuda")
             self.current_model = model
         propmt_preview = prompt.replace("\n", " ")[:40]
         logger.info(f"Processing propmt: {propmt_preview}...")

@@ -2,6 +2,9 @@ import launch
 import pkg_resources
 
 
+KGEN_VERSION = "0.0.6"
+
+
 def get_installed_version(package: str):
     try:
         return pkg_resources.get_distribution(package).version
@@ -29,18 +32,18 @@ def install_llama_cpp():
 
     launch.run_pip(
         f"install {package}",
-        f"LLaMA-CPP-Python for DanTagGen",
+        "LLaMA-CPP-Python for DanTagGen",
     )
 
 
 def install_tipo_kgen():
     version = get_installed_version("tipo-kgen")
-    if version is not None and version >= "0.0.5":
+    if version is not None and version >= KGEN_VERSION:
         return
     print("Attempting to install tipo_kgen")
     launch.run_pip(
-        f"install -U tipo-kgen>=0.0.5",
-        f"tipo-kgen for DanTagGen",
+        f"install -U tipo-kgen>={KGEN_VERSION}",
+        "tipo-kgen for DanTagGen",
     )
 
 
