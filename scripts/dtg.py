@@ -66,13 +66,13 @@ PROMPT_INDICATE_HTML = """
 """
 RECOMMEND_MARKDOWN = """
 ### Rcommended Model and Settings:
-- Model: DanTagGen-beta
-    - gguf quant: Q8 or f16
+- Model: DanTagGen-delta-rev2
+    - gguf quant: Q6 or Q8
     - gguf device: cpu (cuda have reproducibility issue)
 - Settings:
-    - Temperature: 1.2 ~ 1.5
-    - Top P: 0.8 ~ 0.95
-    - Top K: 60 ~ 100
+    - Temperature: 0.8~1.2
+    - Top P: 0.75~0.9
+    - Top K: 50 ~ 90
 """
 
 
