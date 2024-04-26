@@ -42,7 +42,7 @@ def install_tipo_kgen():
         return
     print("Attempting to install tipo_kgen")
     launch.run_pip(
-        f"install -U tipo-kgen>={KGEN_VERSION}",
+        f'install -U "tipo-kgen>={KGEN_VERSION}"',
         "tipo-kgen for DanTagGen",
     )
 
