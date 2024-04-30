@@ -321,7 +321,7 @@ class DTGScript(scripts.Script):
             return
 
         self.original_prompt = p.all_prompts
-        self.original_hr_prompt = p.all_hr_prompts
+        self.original_hr_prompt = getattr(p, "all_hr_prompts", None)
         aspect_ratio = p.width / p.height
         if seed == -1:
             seed = random.randrange(2**31 - 1)
