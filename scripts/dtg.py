@@ -241,24 +241,24 @@ class DTGScript(scripts.Script):
             ),
             (orig_prompt_area, lambda d: d["Prompt"]),
             (enabled_check, lambda d: INFOTEXT_KEY in d),
-            (seed_num_input, lambda d: self.get_infotext(d, "seed", -1)),
-            (tag_length_radio, lambda d: self.get_infotext(d, "tag_length", "long")),
-            (ban_tags_textbox, lambda d: self.get_infotext(d, "ban_tags", "")),
-            (format_textarea, lambda d: d.get(INFOTEXT_KEY_FORMAT, DEFAULT_FORMAT)),
+            (seed_num_input, lambda d: self.get_infotext(d, "seed", None)),
+            (tag_length_radio, lambda d: self.get_infotext(d, "tag_length", None)),
+            (ban_tags_textbox, lambda d: self.get_infotext(d, "ban_tags", None)),
+            (format_textarea, lambda d: d.get(INFOTEXT_KEY_FORMAT, None)),
             (
                 process_timing_dropdown,
-                lambda d: PROCESSING_TIMING[self.get_infotext(d, "timing", "AFTER")],
-            ),
-            (temperature_slider, lambda d: self.get_infotext(d, "temperature", 1.35)),
-            (top_p_slider, lambda d: self.get_infotext(d, "top_p", 0.95)),
-            (top_k_slider, lambda d: self.get_infotext(d, "top_k", 100)),
-            (
-                model_dropdown,
-                lambda d: self.get_infotext(
-                    d, "model", getattr(self, "current_model") or models.model_list[-1]
+                lambda d: PROCESSING_TIMING.get(
+                    self.get_infotext(d, "timing", None), None
                 ),
             ),
-            (gguf_use_cpu, lambda d: self.get_infotext(d, "gguf_cpu", False)),
+            (temperature_slider, lambda d: self.get_infotext(d, "temperature", None)),
+            (top_p_slider, lambda d: self.get_infotext(d, "top_p", None)),
+            (top_k_slider, lambda d: self.get_infotext(d, "top_k", None)),
+            (
+                model_dropdown,
+                lambda d: self.get_infotext(d, "model", None),
+            ),
+            (gguf_use_cpu, lambda d: self.get_infotext(d, "gguf_cpu", None)),
         ]
 
         return [
