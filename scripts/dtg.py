@@ -208,6 +208,7 @@ class DTGScript(scripts.Script):
                         value=models.model_list[0],
                     )
                     gguf_use_cpu = gr.Checkbox(label="Use CPU (GGUF)")
+                    no_formatting = gr.Checkbox(label="No formatting", value=False)
                     temperature_slider = gr.Slider(
                         label="Temperature",
                         info="← less random | more random →",
@@ -259,6 +260,7 @@ class DTGScript(scripts.Script):
                 lambda d: self.get_infotext(d, "model", None),
             ),
             (gguf_use_cpu, lambda d: self.get_infotext(d, "gguf_cpu", None)),
+            (no_formatting, lambda d: self.get_infotext(d, "no_formatting", None)),
         ]
 
         return [
@@ -273,6 +275,7 @@ class DTGScript(scripts.Script):
             top_k_slider,
             model_dropdown,
             gguf_use_cpu,
+            no_formatting,
         ]
 
     def get_infotext(self, d, target, default):
@@ -297,6 +300,7 @@ class DTGScript(scripts.Script):
                 "top_k": args[5],
                 "model": args[6],
                 "gguf_cpu": args[7],
+                "no_formatting": args[8],
             },
             ensure_ascii=False,
         ).translate(QUOTESWAP)
@@ -390,6 +394,7 @@ class DTGScript(scripts.Script):
         top_k: int,
         model: str,
         gguf_use_cpu: bool,
+        no_formatting: bool,
     ):
         if model != self.current_model:
             if " | " in model:
@@ -463,21 +468,25 @@ class DTGScript(scripts.Script):
             f"Total general tags: {len(tag_map['general']+tag_map['special'])} | "
             f"Total iterations: {iter_count}"
         )
-        for cate in tag_map.keys():
-            new_list = []
-            for tag in tag_map[cate]:
-                tag = tag.replace("(", "\(").replace(")", "\)")
-                if tag in strength_map:
-                    new_list.append(f"({tag}:{strength_map[tag]})")
-                else:
-                    new_list.append(tag)
-                if tag in break_map:
-                    new_list.append("BREAK")
-            tag_map[cate] = new_list
-        prompt_by_dtg = apply_format(tag_map, format).replace("BREAK,", "BREAK")
+        if no_formatting:
+            result = prompt + ", " + ", ".join(extra_tokens)
+        else:
+            for cate in tag_map.keys():
+                new_list = []
+                for tag in tag_map[cate]:
+                    tag = tag.replace("(", "\(").replace(")", "\)")
+                    if tag in strength_map:
+                        new_list.append(f"({tag}:{strength_map[tag]})")
+                    else:
+                        new_list.append(tag)
+                    if tag in break_map:
+                        new_list.append("BREAK")
+                tag_map[cate] = new_list
+            prompt_by_dtg = apply_format(tag_map, format).replace("BREAK,", "BREAK")
+            result = prompt_by_dtg + "\n" + rebuild_extranet
 
         logger.info("Prompt processing done.")
-        return prompt_by_dtg + "\n" + rebuild_extranet
+        return result
 
 
 def pares_infotext(_, params):
