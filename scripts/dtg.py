@@ -205,7 +205,7 @@ class DTGScript(scripts.Script):
                                 models.model_list, models.gguf_name
                             )
                         ],
-                        value=models.model_list[-1],
+                        value=models.model_list[0],
                     )
                     gguf_use_cpu = gr.Checkbox(label="Use CPU (GGUF)")
                     temperature_slider = gr.Slider(
