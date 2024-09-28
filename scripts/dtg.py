@@ -19,9 +19,9 @@ from modules.prompt_parser import parse_prompt_attention
 from modules.extra_networks import parse_prompt
 
 import kgen.models as models
-from kgen.formatter import seperate_tags, apply_format, apply_dtg_prompt
+from kgen.executor.dtg import apply_dtg_prompt, tag_gen
+from kgen.formatter import seperate_tags, apply_format
 from kgen.metainfo import TARGET
-from kgen.generate import tag_gen
 from kgen.logging import logger
 
 
