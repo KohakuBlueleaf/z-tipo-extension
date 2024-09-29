@@ -19,6 +19,11 @@ except:
     os.system(f"pip install {package}")
 
 try:
+    import llama_cpp
+except:
+    llama_cpp = None
+
+try:
     import kgen
 except:
     GH_TOKEN = os.getenv("GITHUB_TOKEN") + "@"
@@ -39,19 +44,12 @@ from kgen.metainfo import TARGET
 from kgen.logging import logger
 
 
-model_name = "KBlueLeaf/TIPO-200M-dev"
-gguf_name = "TIPO-200M-40Btok-F16.gguf"
-model_name = ""
-gguf_name = "TIPO-500M_epoch5-F16.gguf"
-try:
-    models.load_model(
-        f"{model_name.split('/')[-1]}_{gguf_name}".strip("_"), gguf=True, device="cuda"
-    )
-except:
-    models.download_gguf(model_name, gguf_name)
-    models.load_model(
-        f"{model_name.split('/')[-1]}_{gguf_name}".strip("_"), gguf=True, device="cuda"
-    )
+model_list = tipo.models.tipo_model_list
+MODEL_NAME_LIST = [
+    f"{model_name} | {file}".strip("_")
+    for model_name, ggufs in models.tipo_model_list
+    for file in ggufs
+] + [i[0] for i in models.tipo_model_list]
 
 
 re_attention = re.compile(
@@ -170,7 +168,7 @@ def parse_prompt_attention(text):
 class TIPO:
 
     def __init__(self):
-        pass
+        self.current_model = None
 
     @classmethod
     def INPUT_TYPES(self):
@@ -179,6 +177,7 @@ class TIPO:
                 "tags": ("STRING", {"default": "", "multiline": True}),
                 "nl_prompt": ("STRING", {"default": "", "multiline": True}),
                 "ban_tags": ("STRING", {"default": "", "multiline": True}),
+                "tipo_model": (MODEL_NAME_LIST, {"default": MODEL_NAME_LIST[0]}),
                 "format": (
                     "STRING",
                     {
@@ -197,6 +196,9 @@ class TIPO:
                 "width": ("INT", {"default": 1024}),
                 "height": ("INT", {"default": 1024}),
                 "temperature": ("FLOAT", {"default": 0.5, "step": 0.01}),
+                "top_p": ("FLOAT", {"default": 0.5, "step": 0.01}),
+                "min_p": ("FLOAT", {"default": 0.05, "step": 0.01}),
+                "top_k": ("INT", {"default": 80}),
                 "tag_length": (
                     ["very_short", "short", "long", "very_long"],
                     {"default": "long"},
@@ -212,6 +214,7 @@ class TIPO:
 
     def execute(
         self,
+        tipo_model: str,
         tags: str,
         nl_prompt: str,
         width: int,
@@ -221,7 +224,23 @@ class TIPO:
         ban_tags: str,
         format: str,
         temperature: float,
+        top_p: float,
+        min_p: float,
+        top_k: int,
     ):
+        if tipo_model != self.current_model:
+            if " | " in tipo_model:
+                model_name, gguf_name = tipo_model.split(" | ")
+                target_file = f"{model_name.split('/')[-1]}_{gguf_name}"
+                if str(models.model_dir / target_file) not in models.list_gguf():
+                    models.download_gguf(model_name, gguf_name)
+                target = os.path.join(str(models.model_dir), target_file)
+                gguf = True
+            else:
+                target = tipo_model
+                gguf = False
+            models.load_model(target, gguf, device="cuda")
+            self.current_model = tipo_model
         aspect_ratio = width / height
         prompt_without_extranet = tags
         prompt_parse_strength = parse_prompt_attention(prompt_without_extranet)
@@ -257,6 +276,9 @@ class TIPO:
             nl_prompt,
             temperature=temperature,
             seed=seed,
+            top_p=top_p,
+            min_p=min_p,
+            top_k=top_k,
         )
         for cate in tag_map.keys():
             new_list = []

@@ -76,6 +76,11 @@ RECOMMEND_MARKDOWN = """
 ### Rcommended Model and Settings:
 
 """
+MODEL_NAME_LIST = [
+    f"{model_name} | {file}"
+    for model_name, ggufs in models.tipo_model_list
+    for file in ggufs
+] + [i[0] for i in models.tipo_model_list]
 
 
 def on_process_timing_dropdown_changed(timing: str):
@@ -238,13 +243,8 @@ class TIPOScript(scripts.Script):
                         gr.Markdown(RECOMMEND_MARKDOWN)
                         model_dropdown = gr.Dropdown(
                             label="Model",
-                            choices=[i[0] for i in models.tipo_model_list]
-                            + [
-                                f"{model_name} | {file}"
-                                for model_name, ggufs in models.tipo_model_list
-                                for file in ggufs
-                            ],
-                            value=models.tipo_model_list[0][0],
+                            choices=MODEL_NAME_LIST,
+                            value=MODEL_NAME_LIST[0],
                         )
                         gguf_use_cpu = gr.Checkbox(label="Use CPU (GGUF)")
                         no_formatting = gr.Checkbox(label="No formatting", value=False)
