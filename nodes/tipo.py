@@ -1,5 +1,6 @@
 import os
 import re
+from pathlib import Path
 
 llama_cpp_python_wheel = (
     "llama-cpp-python --prefer-binary "
@@ -31,6 +32,7 @@ except:
     os.system(f"pip install -U tipo-kgen>=0.1.1")
 
 import torch
+import folder_paths
 
 import kgen.models as models
 import kgen.executor.tipo as tipo
@@ -39,6 +41,10 @@ from kgen.formatter import seperate_tags, apply_format
 from kgen.metainfo import TARGET
 from kgen.logging import logger
 
+
+models.model_dir = Path(folder_paths.models_dir) / "kgen"
+os.makedirs(models.model_dir, exist_ok=True)
+logger.info(f"Using model dir: {models.model_dir}")
 
 model_list = tipo.models.tipo_model_list
 MODEL_NAME_LIST = [
