@@ -1,10 +1,19 @@
-# A1111-SD-WebUI-DTG
+# TIPO-extension [SD-WebUI, ComfyUI, Forge]
 
-A sd-webui extension for utilizing DanTagGen to "upsample prompts".
+A general extension to utilize TIPO or DanTagGen to do "text-presampling" based on KGen library:
+https://github.com/KohakuBlueleaf/KGen
 
 It can generate the detail tags/core tags about the character you put in the prompts. It can also add some extra elements into your prompt.
 
 **an extra z is added to repo name to ensure this extension will run `process()` after other extensions**
+![1727597369983](image/README/1727597369983.png)
+## What is TIPO
+
+TIPO(Text to Image with text presampling for Prompt Optimization) is a LLM model system designed for generating detailed prompt from input tags or caption. Unlike DTG, TIPO can handle both tags and Natural language. In theory, you can also design your own tag in linguistic way. (For example, long blue hair is acceptable tag in TIPO and will not break the model).
+
+More information can be found in this brief tech report:
+https://hackmd.io/@KBlueLeaf/BJULOQBR0
+
 
 ## What is DanTagGen
 
@@ -17,18 +26,22 @@ More information about model arch and training data can be found in the HuggingF
 
 ## How to use it
 
-After install it into the sd-webui or sd-webui-forge. Just enable it in the acordion. It will automatically read the content of your prompt and generate more tags based on your prompt.
+### SD-WebUI/Forge
+Install it from extension tab, after restart the webui, you will found a new nl prompt text box under positive prompt box. And a tipo accordion beside it.
+
+### ComfyUI
+Clone this repo into the custom_node folder, after restart the comfyui, you will see TIPO node is under `utils/promptgen` category.
 
 ### Options
 
 * tag length:
-  * very short: around 10 tags
-  * short: around 20 tags
-  * long: around 40 tags
-  * very long: around 60 tags
+  * very short: 6~17 tags
+  * short: around 18~35 tags
+  * long: around 36~53 tags
+  * very long: around 54~72 tags
   * ***short or long is recommended***
 * Ban tags: The black list of tags you don't want to see in final prompt. Regex supported.
-* Prompt Format: The format of final prompt. Default value is the recommended format of [Kohaku XL Delta](https://civitai.com/models/332076/kohaku-xl-delta)
+* Prompt Format: The format of final prompt. Default value is the recommended format of [Kohaku XL Zeta](https://huggingface.co/KBlueLeaf/Kohaku-XL-Zeta)
 * Seed: the seed of prompt generator. Since we use temperature/top k/top p sampling, so it is not deterministic unless you use same seed. -1 for random seed.
 * Upsampling timing:
   * After: after other prompt processings, for example: after dynamic prompts/wildcard.
@@ -37,10 +50,4 @@ After install it into the sd-webui or sd-webui-forge. Just enable it in the acor
 
 ## Example
 
-![image](https://github.com/KohakuBlueleaf/z-a1111-sd-webui-dtg/assets/59680068/e45995c6-561f-4068-b78c-eeffaf4f9e5f)
-
-## Faster inference
-
-You can now select models in Generation config accordion. The script will automatically download the selected models if it is not existed. (Include gguf model.)
-
-If you want to download the gguf model by yourself, you need to rename it to `<Model Name>_<GGUF Name>` for example: `DanTagGen-gamma_ggml-model-Q6_K.gguf`
+An example workflow for ComfyUI is included in the `examples` folder in this repo, if you want to try it, remember to download https://github.com/pythongosssss/ComfyUI-Custom-Scripts.git into your custom_node folder as well.
