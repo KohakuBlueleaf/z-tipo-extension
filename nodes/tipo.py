@@ -38,7 +38,7 @@ import torch
 
 import kgen.models as models
 import kgen.executor.tipo as tipo
-from kgen.executor.tipo import parse_tipo_request, tipo_runner
+from kgen.executor.tipo import parse_tipo_request, tipo_runner, apply_tipo_prompt, parse_tipo_result
 from kgen.formatter import seperate_tags, apply_format
 from kgen.metainfo import TARGET
 from kgen.logging import logger
@@ -207,8 +207,8 @@ class TIPO:
             },
         }
 
-    RETURN_TYPES = ("STRING",)
-    RETURN_NAMES = ("prompt",)
+    RETURN_TYPES = ("STRING", "STRING")
+    RETURN_NAMES = ("prompt", "user_prompt")
     FUNCTION = "execute"
     CATEGORY = "utils/promptgen"
 
@@ -257,6 +257,21 @@ class TIPO:
             for tag in part_tags:
                 strength_map[tag] = strength
         print(strength_map)
+        def apply_strength(tag_map):
+            for cate in tag_map.keys():
+                new_list = []
+                # Skip natural language output at first
+                if isinstance(tag_map[cate], str):
+                    tag_map[cate] = tag_map[cate].replace("(", "\(").replace(")", "\)")
+                    continue
+                for org_tag in tag_map[cate]:
+                    tag = org_tag.replace("(", "\(").replace(")", "\)")
+                    if org_tag in strength_map:
+                        new_list.append(f"({tag}:{strength_map[org_tag]})")
+                    else:
+                        new_list.append(tag)
+                tag_map[cate] = new_list
+            return tag_map
 
         tag_length = tag_length.replace(" ", "_")
         tag_map = seperate_tags(all_tags)
@@ -269,6 +284,13 @@ class TIPO:
         )
         meta["aspect_ratio"] = f"{aspect_ratio:.1f}"
 
+        org_prompt = parse_tipo_result(apply_tipo_prompt(
+            meta, general, nl_prompt, "short_to_tag_to_long", tag_length, True, gen_meta=True
+        ))
+        org_prompt = apply_strength(org_prompt)
+        prompt_by_user = apply_format(org_prompt, format)
+        print(prompt_by_user)
+
         tag_map, _ = tipo_runner(
             meta,
             operations,
@@ -280,23 +302,9 @@ class TIPO:
             min_p=min_p,
             top_k=top_k,
         )
-        for cate in tag_map.keys():
-            new_list = []
-            # Skip natural language output at first
-            if isinstance(tag_map[cate], str):
-                tag_map[cate] = tag_map[cate].replace("(", "\(").replace(")", "\)")
-                continue
-            for org_tag in tag_map[cate]:
-                tag = org_tag.replace("(", "\(").replace(")", "\)")
-                if org_tag in strength_map:
-                    new_list.append(f"({tag}:{strength_map[org_tag]})")
-                else:
-                    new_list.append(tag)
-            tag_map[cate] = new_list
+        tag_map = apply_strength(tag_map)
         prompt_by_tipo = apply_format(tag_map, format)
-        result = prompt_by_tipo
-        print(result)
-        return (result,)
+        return (prompt_by_tipo, prompt_by_user)
 
 
 NODE_CLASS_MAPPINGS = {
