@@ -501,8 +501,8 @@ class TIPOScript(scripts.Script):
             tag_map,
             nl_prompt,
             tag_length_target=tag_length,
-            generate_extra_nl_prompt=(not nl_prompt and "<|extended|>" in nl_prompt)
-            or "<|generated|>" in nl_prompt,
+            generate_extra_nl_prompt=(not nl_prompt and "<|extended|>" in format)
+            or "<|generated|>" in format,
         )
         meta["aspect_ratio"] = f"{aspect_ratio:.1f}"
 
