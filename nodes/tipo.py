@@ -25,14 +25,10 @@ except:
 
 try:
     import kgen
+    if kgen.__version__ < "0.1.1":
+        raise ImportError
 except:
-    GH_TOKEN = os.getenv("GITHUB_TOKEN") + "@"
-    if GH_TOKEN == "@":
-        GH_TOKEN = ""
-    git_url = f"https://{GH_TOKEN}github.com/KohakuBlueleaf/TIPO-KGen@tipo"
-
-    ## call pip install
-    os.system(f"pip install git+{git_url}")
+    os.system(f"pip install -U tipo-kgen>=0.1.1")
 
 import torch
 
