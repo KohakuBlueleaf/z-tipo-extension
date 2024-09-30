@@ -198,7 +198,7 @@ class TIPO:
                 "width": ("INT", {"default": 1024}),
                 "height": ("INT", {"default": 1024}),
                 "temperature": ("FLOAT", {"default": 0.5, "step": 0.01}),
-                "top_p": ("FLOAT", {"default": 0.5, "step": 0.01}),
+                "top_p": ("FLOAT", {"default": 0.95, "step": 0.01}),
                 "min_p": ("FLOAT", {"default": 0.05, "step": 0.01}),
                 "top_k": ("INT", {"default": 80}),
                 "tag_length": (
@@ -258,7 +258,6 @@ class TIPO:
                 continue
             for tag in part_tags:
                 strength_map[tag] = strength
-        print(strength_map)
         def apply_strength(tag_map):
             for cate in tag_map.keys():
                 new_list = []
@@ -291,7 +290,6 @@ class TIPO:
         ))
         org_prompt = apply_strength(org_prompt)
         prompt_by_user = apply_format(org_prompt, format)
-        print(prompt_by_user)
 
         tag_map, _ = tipo_runner(
             meta,
