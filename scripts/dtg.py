@@ -491,8 +491,8 @@ class DTGScript(scripts.Script):
 
 def pares_infotext(_, params):
     try:
-        params["DTG Parameters"] = json.loads(
-            params["DTG Parameters"].translate(QUOTESWAP)
+        params[INFOTEXT_KEY] = json.loads(
+            params[INFOTEXT_KEY].translate(QUOTESWAP)
         )
     except Exception:
         pass

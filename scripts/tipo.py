@@ -545,8 +545,8 @@ class TIPOScript(scripts.Script):
 
 def pares_infotext(_, params):
     try:
-        params["TIPO Parameters"] = json.loads(
-            params["TIPO Parameters"].translate(QUOTESWAP)
+        params[INFOTEXT_KEY] = json.loads(
+            params[INFOTEXT_KEY].translate(QUOTESWAP)
         )
     except Exception:
         pass

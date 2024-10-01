@@ -8,7 +8,7 @@ llama_cpp_python_wheel = (
 )
 try:
     import llama_cpp
-except:
+except Exception as e:
     print("Attempting to install LLaMA-CPP-Python")
     import torch
 
@@ -21,14 +21,14 @@ except:
 
 try:
     import llama_cpp
-except:
+except Exception as e:
     llama_cpp = None
 
 try:
     import kgen
     if kgen.__version__ < "0.1.1":
         raise ImportError
-except:
+except Exception as e:
     os.system(f"pip install -U tipo-kgen>=0.1.1")
 
 import torch
@@ -173,7 +173,7 @@ class TIPO:
         self.current_model = None
 
     @classmethod
-    def INPUT_TYPES(self):
+    def INPUT_TYPES(cls):
         return {
             "required": {
                 "tags": ("STRING", {"default": "", "multiline": True}),
