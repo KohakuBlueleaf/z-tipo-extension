@@ -591,6 +591,8 @@ class TIPOScript(scripts.Script):
             if cate not in org_tag_map:
                 continue
             for tag in tag_map[cate]:
+                if tag in org_tag_map[cate]:
+                    continue
                 addon["tags"].append(tag)
         addon = apply_strength(addon, strength_map, strength_map_nl, break_map)
         unformatted_prompt_by_tipo = (

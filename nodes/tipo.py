@@ -365,6 +365,8 @@ class TIPO:
             if cate not in org_tag_map:
                 continue
             for tag in tag_map[cate]:
+                if tag in org_tag_map[cate]:
+                    continue
                 addon["tags"].append(tag)
         addon = apply_strength(addon)
         unformatted_prompt_by_tipo = (
