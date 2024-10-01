@@ -348,7 +348,6 @@ class TIPO:
             min_p=min_p,
             top_k=top_k,
         )
-        tag_map = apply_strength(tag_map)
 
         addon = {
             "tags": [],
@@ -373,6 +372,7 @@ class TIPO:
             tags + ", " + ", ".join(addon["tags"]) + "\n" + addon["nl"]
         )
 
+        tag_map = apply_strength(tag_map)
         formatted_prompt_by_tipo = apply_format(tag_map, format)
         return (
             formatted_prompt_by_tipo,
