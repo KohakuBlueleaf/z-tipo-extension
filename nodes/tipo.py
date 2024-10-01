@@ -26,6 +26,7 @@ except Exception as e:
 
 try:
     import kgen
+
     if kgen.__version__ < "0.1.1":
         raise ImportError
 except Exception as e:
@@ -36,7 +37,12 @@ import folder_paths
 
 import kgen.models as models
 import kgen.executor.tipo as tipo
-from kgen.executor.tipo import parse_tipo_request, tipo_runner, apply_tipo_prompt, parse_tipo_result
+from kgen.executor.tipo import (
+    parse_tipo_request,
+    tipo_runner,
+    apply_tipo_prompt,
+    parse_tipo_result,
+)
 from kgen.formatter import seperate_tags, apply_format
 from kgen.metainfo import TARGET
 from kgen.logging import logger
@@ -205,12 +211,21 @@ class TIPO:
                     ["very_short", "short", "long", "very_long"],
                     {"default": "long"},
                 ),
+                "nl_length": (
+                    ["very_short", "short", "long", "very_long"],
+                    {"default": "long"},
+                ),
                 "seed": ("INT", {"default": 1234}),
             },
         }
 
-    RETURN_TYPES = ("STRING", "STRING")
-    RETURN_NAMES = ("prompt", "user_prompt")
+    RETURN_TYPES = ("STRING", "STRING", "STRING", "STRING")
+    RETURN_NAMES = (
+        "prompt",
+        "user_prompt",
+        "unformatted_prompt",
+        "unformatted_user_prompt",
+    )
     FUNCTION = "execute"
     CATEGORY = "utils/promptgen"
 
@@ -223,6 +238,7 @@ class TIPO:
         height: int,
         seed: int,
         tag_length: str,
+        nl_length: str,
         ban_tags: str,
         format: str,
         temperature: float,
@@ -247,6 +263,15 @@ class TIPO:
         prompt_without_extranet = tags
         prompt_parse_strength = parse_prompt_attention(prompt_without_extranet)
 
+        nl_prompt_parse_strength = parse_prompt_attention(nl_prompt)
+        nl_prompt = ""
+        strength_map_nl = []
+        for part, strength in nl_prompt_parse_strength:
+            nl_prompt += part
+            if strength == 1:
+                continue
+            strength_map_nl.append((part, strength))
+
         black_list = [tag.strip() for tag in ban_tags.split(",") if tag.strip()]
         tipo.BAN_TAGS = black_list
         all_tags = []
@@ -258,12 +283,23 @@ class TIPO:
                 continue
             for tag in part_tags:
                 strength_map[tag] = strength
+
         def apply_strength(tag_map):
             for cate in tag_map.keys():
                 new_list = []
                 # Skip natural language output at first
                 if isinstance(tag_map[cate], str):
-                    tag_map[cate] = tag_map[cate].replace("(", "\(").replace(")", "\)")
+                    # Ensure all the parts in the strength_map are in the prompt
+                    if all(part in tag_map[cate] for part, strength in strength_map_nl):
+                        org_prompt = tag_map[cate]
+                        new_prompt = ""
+                        for part, strength in strength_map_nl:
+                            before, org_prompt = org_prompt.split(part, 1)
+                            new_prompt += before.replace("(", "\(").replace(")", "\)")
+                            part = part.replace("(", "\(").replace(")", "\)")
+                            new_prompt += f"({part}:{strength})"
+                        new_prompt += org_prompt
+                    tag_map[cate] = new_prompt
                     continue
                 for org_tag in tag_map[cate]:
                     tag = org_tag.replace("(", "\(").replace(")", "\)")
@@ -275,21 +311,31 @@ class TIPO:
             return tag_map
 
         tag_length = tag_length.replace(" ", "_")
-        tag_map = seperate_tags(all_tags)
+        org_tag_map = seperate_tags(all_tags)
         meta, operations, general, nl_prompt = parse_tipo_request(
-            tag_map,
+            org_tag_map,
             nl_prompt,
             tag_length_target=tag_length,
+            nl_length_target=nl_length,
             generate_extra_nl_prompt=(not nl_prompt and "<|extended|>" in format)
             or "<|generated|>" in format,
         )
         meta["aspect_ratio"] = f"{aspect_ratio:.1f}"
 
-        org_prompt = parse_tipo_result(apply_tipo_prompt(
-            meta, general, nl_prompt, "short_to_tag_to_long", tag_length, True, gen_meta=True
-        ))
-        org_prompt = apply_strength(org_prompt)
-        prompt_by_user = apply_format(org_prompt, format)
+        org_formatted_prompt = parse_tipo_result(
+            apply_tipo_prompt(
+                meta,
+                general,
+                nl_prompt,
+                "short_to_tag_to_long",
+                tag_length,
+                True,
+                gen_meta=True,
+            )
+        )
+        org_formatted_prompt = apply_strength(org_formatted_prompt)
+        formatted_prompt_by_user = apply_format(org_formatted_prompt, format)
+        unformatted_prompt_by_user = tags + nl_prompt
 
         tag_map, _ = tipo_runner(
             meta,
@@ -303,8 +349,35 @@ class TIPO:
             top_k=top_k,
         )
         tag_map = apply_strength(tag_map)
-        prompt_by_tipo = apply_format(tag_map, format)
-        return (prompt_by_tipo, prompt_by_user)
+
+        addon = {
+            "tags": [],
+            "nl": "",
+        }
+        for cate in tag_map.keys():
+            if cate == "generated" and addon["nl"] == "":
+                addon["nl"] = tag_map[cate]
+                continue
+            if cate == "extended":
+                extended = tag_map[cate]
+                addon["nl"] = extended
+                continue
+            if cate not in org_tag_map:
+                continue
+            for tag in tag_map[cate]:
+                addon["tags"].append(tag)
+        addon = apply_strength(addon)
+        unformatted_prompt_by_tipo = (
+            tags + ", " + ", ".join(addon["tags"]) + "\n" + addon["nl"]
+        )
+
+        formatted_prompt_by_tipo = apply_format(tag_map, format)
+        return (
+            formatted_prompt_by_tipo,
+            formatted_prompt_by_user,
+            unformatted_prompt_by_tipo,
+            unformatted_prompt_by_user,
+        )
 
 
 NODE_CLASS_MAPPINGS = {
