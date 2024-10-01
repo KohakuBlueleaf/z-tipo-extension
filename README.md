@@ -40,8 +40,24 @@ Clone this repo into the custom_node folder, after restart the comfyui, you will
   * long: around 36~53 tags
   * very long: around 54~72 tags
   * ***short or long is recommended***
+* NL length:
+  * very short: 1~2 sentences
+  * short: 2~4 sentences
+  * long: 4~6 sentences
+  * very long: 6~8 sentences
+  * ***short or long is recommended***
 * Ban tags: The black list of tags you don't want to see in final prompt. Regex supported.
 * Prompt Format: The format of final prompt. Default value is the recommended format of [Kohaku XL Zeta](https://huggingface.co/KBlueLeaf/Kohaku-XL-Zeta)
+  * `<|special|>`: 1girl, 1boy, 1other, ...
+  * `<|characters|>`: character tags
+  * `<|copyrights|>`: copyright tags (series name)
+  * `<|artist|>`: artist tags
+  * `<|general|>`: general tags
+  * `<|meta|>`: highres/lowres/absurdres are all meta tags
+  * `<|quality|>`: score_xxx, masterpiece, best quality...
+  * `<|rating|>`: safe, sensitive, nsfw, explicit ...
+  * `<|generated|>`: generated NL prompt
+  * `<|extended|>`: extended NL prompt (If nl prompt is not provided, extended will be filled with generated NL caption. if both extended and generated are in the format but nl prompt is not provided, TIPO will generate 2 NL prompt.)
 * Seed: the seed of prompt generator. Since we use temperature/top k/top p sampling, so it is not deterministic unless you use same seed. -1 for random seed.
 * Upsampling timing:
   * After: after other prompt processings, for example: after dynamic prompts/wildcard.
