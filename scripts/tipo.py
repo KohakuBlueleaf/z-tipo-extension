@@ -26,7 +26,12 @@ else:
 
 import kgen.models as models
 import kgen.executor.tipo as tipo
-from kgen.executor.tipo import parse_tipo_request, tipo_runner
+from kgen.executor.tipo import (
+    parse_tipo_request,
+    tipo_runner,
+    apply_tipo_prompt,
+    parse_tipo_result,
+)
 from kgen.formatter import seperate_tags, apply_format
 from kgen.metainfo import TARGET, TIPO_DEFAULT_FORMAT
 from kgen.logging import logger
@@ -92,6 +97,36 @@ def on_process_timing_dropdown_changed(timing: str):
     else:
         raise Exception(f"Unknown timing: {timing}")
     return TIMING_INFO_TEMPLATE.format(info)
+
+
+def apply_strength(tag_map, strength_map, strength_map_nl, break_map):
+    for cate in tag_map.keys():
+        new_list = []
+        # Skip natural language output at first
+        if isinstance(tag_map[cate], str):
+            # Ensure all the parts in the strength_map are in the prompt
+            if all(part in tag_map[cate] for part, strength in strength_map_nl):
+                org_prompt = tag_map[cate]
+                new_prompt = ""
+                for part, strength in strength_map_nl:
+                    before, org_prompt = org_prompt.split(part, 1)
+                    new_prompt += before.replace("(", "\(").replace(")", "\)")
+                    part = part.replace("(", "\(").replace(")", "\)")
+                    new_prompt += f"({part}:{strength})"
+                new_prompt += org_prompt
+            tag_map[cate] = new_prompt
+            continue
+        for org_tag in tag_map[cate]:
+            tag = org_tag.replace("(", "\(").replace(")", "\)")
+            if org_tag in strength_map:
+                new_list.append(f"({tag}:{strength_map[org_tag]})")
+            else:
+                new_list.append(tag)
+            if tag in break_map or org_tag in break_map:
+                new_list.append("BREAK")
+        tag_map[cate] = new_list
+
+    return tag_map
 
 
 class TIPOScript(scripts.Script):
@@ -168,7 +203,12 @@ class TIPOScript(scripts.Script):
                         )
 
                     tag_length_radio = gr.Radio(
-                        label="Length target",
+                        label="Tags Length target",
+                        choices=list(TOTAL_TAG_LENGTH.values()),
+                        value=TOTAL_TAG_LENGTH["LONG"],
+                    )
+                    nl_length_radio = gr.Radio(
+                        label="NL Length target",
                         choices=list(TOTAL_TAG_LENGTH.values()),
                         value=TOTAL_TAG_LENGTH["LONG"],
                     )
@@ -291,6 +331,7 @@ class TIPOScript(scripts.Script):
             (enabled_check, lambda d: INFOTEXT_KEY in d),
             (seed_num_input, lambda d: self.get_infotext(d, "seed", None)),
             (tag_length_radio, lambda d: self.get_infotext(d, "tag_length", None)),
+            (nl_length_radio, lambda d: self.get_infotext(d, "nl_length", None)),
             (ban_tags_textbox, lambda d: self.get_infotext(d, "ban_tags", None)),
             (format_dropdown, lambda d: self.get_infotext(d, "format", None)),
             (format_textarea, lambda d: d.get(INFOTEXT_KEY_FORMAT, None)),
@@ -316,6 +357,7 @@ class TIPOScript(scripts.Script):
             process_timing_dropdown,
             seed_num_input,
             tag_length_radio,
+            nl_length_radio,
             ban_tags_textbox,
             format_dropdown,
             format_textarea,
@@ -344,14 +386,15 @@ class TIPOScript(scripts.Script):
                 "seed": seed,
                 "timing": process_timing,
                 "tag_length": args[0],
-                "ban_tags": args[1],
-                "format": args[2],
-                "temperature": args[4],
-                "top_p": args[5],
-                "top_k": args[6],
-                "model": args[7],
-                "gguf_cpu": args[8],
-                "no_formatting": args[9],
+                "nl_length": args[1],
+                "ban_tags": args[2],
+                "format": args[3],
+                "temperature": args[5],
+                "top_p": args[6],
+                "top_k": args[7],
+                "model": args[8],
+                "gguf_cpu": args[9],
+                "no_formatting": args[10],
             },
             ensure_ascii=False,
         ).translate(QUOTESWAP)
@@ -443,6 +486,7 @@ class TIPOScript(scripts.Script):
         aspect_ratio: float,
         seed: int,
         tag_length: str,
+        nl_length: str,
         ban_tags: str,
         format_select: str,
         format: str,
@@ -472,6 +516,15 @@ class TIPOScript(scripts.Script):
         prompt_without_extranet, res = parse_prompt(prompt)
         prompt_parse_strength = parse_prompt_attention(prompt_without_extranet)
 
+        nl_prompt_parse_strength = parse_prompt_attention(nl_prompt)
+        nl_prompt = ""
+        strength_map_nl = []
+        for part, strength in nl_prompt_parse_strength:
+            nl_prompt += part
+            if strength == 1:
+                continue
+            strength_map_nl.append((part, strength))
+
         rebuild_extranet = ""
         for name, params in res.items():
             for param in params:
@@ -495,12 +548,13 @@ class TIPOScript(scripts.Script):
                 strength_map[tag] = strength
 
         tag_length = tag_length.replace(" ", "_")
-        tag_map = seperate_tags(all_tags)
+        org_tag_map = seperate_tags(all_tags)
 
         meta, operations, general, nl_prompt = parse_tipo_request(
-            tag_map,
+            org_tag_map,
             nl_prompt,
             tag_length_target=tag_length,
+            nl_length_target=nl_length,
             generate_extra_nl_prompt=(not nl_prompt and "<|extended|>" in format)
             or "<|generated|>" in format,
         )
@@ -521,33 +575,45 @@ class TIPOScript(scripts.Script):
         if isinstance(models.text_model, torch.nn.Module):
             models.text_model.cpu()
             devices.torch_gc()
-        for cate in tag_map.keys():
-            new_list = []
-            # Skip natural language output at first
-            if isinstance(tag_map[cate], str):
-                tag_map[cate] = tag_map[cate].replace("(", "\(").replace(")", "\)")
-                continue
-            for org_tag in tag_map[cate]:
-                tag = org_tag.replace("(", "\(").replace(")", "\)")
-                if org_tag in strength_map:
-                    new_list.append(f"({tag}:{strength_map[org_tag]})")
-                else:
-                    new_list.append(tag)
-                if tag in break_map or org_tag in break_map:
-                    new_list.append("BREAK")
-            tag_map[cate] = new_list
-        prompt_by_tipo = apply_format(tag_map, format).replace("BREAK,", "BREAK")
-        result = prompt_by_tipo + "\n" + rebuild_extranet
 
+        addon = {
+            "tags": [],
+            "nl": "",
+        }
+        for cate in tag_map.keys():
+            if cate == "generated" and addon["nl"] == "":
+                addon["nl"] = tag_map[cate]
+                continue
+            if cate == "extended":
+                extended = tag_map[cate]
+                addon["nl"] = extended
+                continue
+            if cate not in org_tag_map:
+                continue
+            for tag in tag_map[cate]:
+                addon["tags"].append(tag)
+        addon = apply_strength(addon, strength_map, strength_map_nl, break_map)
+        unformatted_prompt_by_tipo = (
+            prompt + ", " + ", ".join(addon["tags"]) + "\n" + addon["nl"]
+        )
+        tag_map = apply_strength(tag_map, strength_map, strength_map_nl, break_map)
+        formatted_prompt_by_tipo = apply_format(tag_map, format).replace(
+            "BREAK,", "BREAK"
+        )
+
+        if no_formatting:
+            final_prompt = unformatted_prompt_by_tipo
+        else:
+            final_prompt = formatted_prompt_by_tipo
+
+        result = final_prompt + "\n" + rebuild_extranet
         logger.info("Prompt processing done.")
         return result
 
 
 def pares_infotext(_, params):
     try:
-        params[INFOTEXT_KEY] = json.loads(
-            params[INFOTEXT_KEY].translate(QUOTESWAP)
-        )
+        params[INFOTEXT_KEY] = json.loads(params[INFOTEXT_KEY].translate(QUOTESWAP))
     except Exception:
         pass
 
