@@ -83,7 +83,7 @@ def on_process_timing_dropdown_changed(timing: str):
     elif timing == PROCESSING_TIMING["AFTER"]:
         info = "**all images in batch**, **after**"
     else:
-        raise Exception(f"Unknown timing: {timing}")
+        raise ValueError(f"Unknown timing: {timing}")
     return TIMING_INFO_TEMPLATE.format(info)
 
 
@@ -444,7 +444,7 @@ class DTGScript(scripts.Script):
 
         if isinstance(models.text_model, torch.nn.Module):
             models.text_model.to(devices.device)
-        for _, extra_tokens, iter_count in tag_gen(
+        for current in tag_gen(
             models.text_model,
             models.tokenizer,
             dtg_prompt,
@@ -459,7 +459,7 @@ class DTGScript(scripts.Script):
             max_same_output=15,
             seed=seed % SEED_MAX,
         ):
-            pass
+            _, extra_tokens, iter_count = current
         if isinstance(models.text_model, torch.nn.Module):
             models.text_model.cpu()
             devices.torch_gc()

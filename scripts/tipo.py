@@ -95,7 +95,7 @@ def on_process_timing_dropdown_changed(timing: str):
     elif timing == PROCESSING_TIMING["AFTER"]:
         info = "**all images in batch**, **after**"
     else:
-        raise Exception(f"Unknown timing: {timing}")
+        raise ValueError(f"Unknown timing: {timing}")
     return TIMING_INFO_TEMPLATE.format(info)
 
 
