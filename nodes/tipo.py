@@ -30,7 +30,7 @@ try:
     if kgen.__version__ < "0.1.2":
         raise ImportError
 except Exception as e:
-    os.system("pip install -U tipo-kgen>=0.1.2")
+    os.system("pip install -U \"tipo-kgen>=0.1.2\"")
 
 import torch
 import folder_paths
