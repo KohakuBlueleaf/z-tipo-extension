@@ -1,3 +1,6 @@
+import scripts
+print(scripts, scripts.__file__, dir(scripts))
+
 import os
 import itertools
 import json
@@ -388,7 +391,8 @@ class TIPOScript(scripts.Script):
                 "tag_length": args[0],
                 "nl_length": args[1],
                 "ban_tags": args[2],
-                "format": args[3],
+                "format_selected": args[3],
+                "format": args[4],
                 "temperature": args[5],
                 "top_p": args[6],
                 "top_k": args[7],
@@ -425,6 +429,9 @@ class TIPOScript(scripts.Script):
         if seed == -1:
             seed = random.randrange(2**31 - 1)
         seed = int(seed)
+
+        if args[3] != "custom":
+            args[4] = TIPO_DEFAULT_FORMAT.get(args[3], args[4])
 
         self.write_infotext(p, p.prompt, "AFTER", seed, *args)
 
