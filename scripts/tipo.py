@@ -430,6 +430,7 @@ class TIPOScript(scripts.Script):
             seed = random.randrange(2**31 - 1)
         seed = int(seed)
 
+        args = list(args)
         if args[3] != "custom":
             args[4] = TIPO_DEFAULT_FORMAT.get(args[3], args[4])
 
