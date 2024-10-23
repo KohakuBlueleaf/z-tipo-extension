@@ -26,6 +26,8 @@ def install_llama_cpp():
 
     has_cuda = torch.cuda.is_available()
     cuda_version = torch.version.cuda.replace(".", "")
+    if cuda_version == "124":
+        cuda_version = "122"
     package = llama_cpp_python_wheel.format(
         "AVX2", f"cu{cuda_version}" if has_cuda else "cpu"
     )
