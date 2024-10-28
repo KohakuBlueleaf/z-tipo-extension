@@ -2,7 +2,7 @@ import launch
 import pkg_resources
 
 
-KGEN_VERSION = "0.1.2"
+KGEN_VERSION = "0.1.4"
 
 
 def get_installed_version(package: str):

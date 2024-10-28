@@ -29,10 +29,10 @@ except Exception as e:
 try:
     import kgen
 
-    if kgen.__version__ < "0.1.2":
+    if kgen.__version__ < "0.1.4":
         raise ImportError
 except Exception as e:
-    os.system("pip install -U \"tipo-kgen>=0.1.2\"")
+    os.system("pip install -U \"tipo-kgen>=0.1.4\"")
 
 import torch
 import folder_paths
@@ -203,8 +203,8 @@ class TIPO:
                         "multiline": True,
                     },
                 ),
-                "width": ("INT", {"default": 1024}),
-                "height": ("INT", {"default": 1024}),
+                "width": ("INT", {"default": 1024, "max": 16384}),
+                "height": ("INT", {"default": 1024, "max": 16384}),
                 "temperature": ("FLOAT", {"default": 0.5, "step": 0.01}),
                 "top_p": ("FLOAT", {"default": 0.95, "step": 0.01}),
                 "min_p": ("FLOAT", {"default": 0.05, "step": 0.01}),
