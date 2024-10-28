@@ -1,2 +1,7 @@
 tipo-kgen>=0.1.2
 transformers
+kgen
+scikit_build_core
+cmake
+ninja
+llama-cpp-python
