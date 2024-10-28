@@ -35,6 +35,8 @@ Clone this repo into the custom_node folder, after restart the comfyui, you will
 PAseer tips：
 1. Make sure your pip environment has installed Llama first 【 the node should do this automatically. 】
 2. If you want to use your special location of the Tipo-model. Once the z-tipo-extension node has been successfully installed, open [model.py] in [...\ComfyUI_windows_portable\python_embedded\Lib\site-packages\kgen] folder. At around line 100, after [text_model = Llama (……] . Simply alter [str. ....] into follow your model's exact path.
+![QQ20241028-183351](https://github.com/user-attachments/assets/87eead0a-7882-4088-bd51-1102b33d5a9f)
+
 
 ### Options
 
