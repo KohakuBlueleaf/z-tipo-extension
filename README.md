@@ -32,6 +32,10 @@ Install it from extension tab, after restart the webui, you will found a new nl 
 ### ComfyUI
 Clone this repo into the custom_node folder, after restart the comfyui, you will see TIPO node is under `utils/promptgen` category.
 
+PAseer小贴士：
+1. 首先，你需要安装好llama环境以及相关的pip组件。我将所需的组件都写到了requirements.txt文件中，记得更新。
+2. 如果你想要直接输入模型的位置，在成功构建了tipo节点之后，在..\ComfyUI_windows_portable\python_embeded\Lib\site-packages\kgen文件夹中，找到model.py文件，打开后，定位到100行左右的，text_model = Llama(后. 将str.改成你下载的模型的绝对路径即可。
+
 ### Options
 
 * tag length:
