@@ -340,7 +340,7 @@ class TIPOScript(scripts.Script):
         aspect_ratio_place_holder = gr.Number(value=1.0, visible=False)
 
         prompt_gen.click(
-            self._process,
+            self.prompt_gen_only,
             inputs=[
                 self.tag_prompt_area[is_img2img],
                 self.prompt_area[is_img2img * 2 + 1],
@@ -357,6 +357,7 @@ class TIPOScript(scripts.Script):
                 model_dropdown,
                 gguf_use_cpu,
                 no_formatting,
+                self.tag_prompt_area[is_img2img],
             ],
             outputs=[
                 self.prompt_area[is_img2img * 2],
@@ -534,6 +535,14 @@ class TIPOScript(scripts.Script):
         args = list(args)
         p.prompt = self._process(p.prompt, args.pop(), aspect_ratio, seed, *args)
 
+    def prompt_gen_only(self, *args):
+        args = list(args)
+        seed = args[3]
+        if seed == -1:
+            seed = random.randrange(2**31 - 1)
+            args[3] = seed
+        return self._process(*args)
+
     @lru_cache(128)
     def _process(
         self,
@@ -555,8 +564,6 @@ class TIPOScript(scripts.Script):
         tag_prompt: str,
     ):
         prompt = prompt.strip() or tag_prompt
-        if seed == -1:
-            seed = random.randrange(2**31 - 1)
         seed = int(seed) % SEED_MAX
         if model != self.current_model:
             if " | " in model:
