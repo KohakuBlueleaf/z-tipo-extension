@@ -1,8 +1,8 @@
 import scripts
+
 print(scripts, scripts.__file__, dir(scripts))
 
 import os
-import itertools
 import json
 import pathlib
 import random
@@ -12,7 +12,7 @@ import torch
 import gradio as gr
 
 import modules.scripts as scripts
-from modules import devices
+from modules import devices, shared, options
 from modules.scripts import basedir, OnComponent
 from modules.processing import (
     StableDiffusionProcessingTxt2Img,
@@ -136,23 +136,32 @@ class TIPOScript(scripts.Script):
     def __init__(self):
         super().__init__()
         self.prompt_area = [None, None, None, None]
+        self.tag_prompt_area = [None, None]
         self.prompt_area_row = [None, None]
         self.current_model = None
         self.on_after_component_elem_id = [
-            ("txt2img_prompt_row", lambda x: self.create_new_prompt_area(0)),
+            ("txt2img_prompt_row", lambda x: self.create_new_prompt_area(0, x)),
             ("txt2img_prompt", lambda x: self.set_prompt_area(0, x)),
-            ("img2img_prompt_row", lambda x: self.create_new_prompt_area(1)),
+            ("img2img_prompt_row", lambda x: self.create_new_prompt_area(1, x)),
             ("img2img_prompt", lambda x: self.set_prompt_area(1, x)),
         ]
 
-    def create_new_prompt_area(self, i2i: int):
+    def create_new_prompt_area(self, i2i: int, prompt_row: OnComponent):
+        with prompt_row.component:
+            with gr.Column(visible=not opts.tipo_no_extra_input):
+                new_tag_propmt_area = gr.Textbox(
+                    label="Tag Prompt",
+                    lines=3,
+                    placeholder="Tag Prompt for TIPO (Put Tags to Propmt region)",
+                )
+                new_propmt_area = gr.Textbox(
+                    label="Natural Language Prompt",
+                    lines=3,
+                    placeholder="Natural Language Prompt for TIPO (Put Tags to Propmt region)",
+                )
+        self.tag_prompt_area[i2i] = new_tag_propmt_area
         self.prompt_area_row[i2i] = gr.Row()
-        with self.prompt_area_row[i2i]:
-            new_propmt_area = gr.Textbox(
-                label="Natural Language Prompt",
-                lines=3,
-                placeholder="Natural Language Prompt for TIPO (Put Tags to Propmt region)",
-            )
+        # with self.prompt_area_row[i2i]:
         self.prompt_area[i2i * 2 + 1] = new_propmt_area
 
     def set_prompt_area(self, i2i: int, component: OnComponent):
@@ -166,155 +175,193 @@ class TIPOScript(scripts.Script):
 
     def ui(self, is_img2img):
         with self.prompt_area_row[is_img2img]:
-            with (
-                InputAccordion(False, open=False, label=self.title())
-                if InputAccordion
-                else gr.Accordion(open=False, label=self.title())
-            ) as tipo_acc:
-                with gr.Column():
+            with gr.Column(
+                scale=1, min_width=180, visible=not opts.tipo_no_extra_input
+            ):
+                prompt_gen = gr.Button(value="Generate Prompt")
+            with gr.Column(scale=6):
+                with (
+                    InputAccordion(False, open=False, label=self.title())
+                    if InputAccordion
+                    else gr.Accordion(open=False, label=self.title())
+                ) as tipo_acc:
                     with gr.Row():
-                        with gr.Column(scale=1):
-                            if InputAccordion is None:
-                                enabled_check = gr.Checkbox(
-                                    label="Enabled", value=False, min_width=20
+                        with gr.Column():
+                            with gr.Row():
+                                with gr.Column(scale=1):
+                                    if InputAccordion is None:
+                                        enabled_check = gr.Checkbox(
+                                            label="Enabled", value=False, min_width=20
+                                        )
+                                    else:
+                                        enabled_check = tipo_acc
+                                    read_orig_prompt_btn = gr.Button(
+                                        size="sm",
+                                        value="Apply original prompt",
+                                        visible=False,
+                                        min_width=20,
+                                    )
+                                with gr.Column(scale=3):
+                                    orig_prompt_area = gr.TextArea(visible=False)
+                                    orig_prompt_light = gr.HTML("")
+                                orig_prompt_area.change(
+                                    lambda x: PROMPT_INDICATE_HTML * bool(x),
+                                    inputs=orig_prompt_area,
+                                    outputs=orig_prompt_light,
                                 )
-                            else:
-                                enabled_check = tipo_acc
-                            read_orig_prompt_btn = gr.Button(
-                                size="sm",
-                                value="Apply original prompt",
+                                orig_prompt_area.change(
+                                    lambda x: gr.update(visible=bool(x)),
+                                    inputs=orig_prompt_area,
+                                    outputs=read_orig_prompt_btn,
+                                )
+                                read_orig_prompt_btn.click(
+                                    fn=lambda x: x,
+                                    inputs=[orig_prompt_area],
+                                    outputs=self.prompt_area[is_img2img],
+                                )
+
+                            tag_length_radio = gr.Radio(
+                                label="Tags Length target",
+                                choices=list(TOTAL_TAG_LENGTH.values()),
+                                value=TOTAL_TAG_LENGTH["LONG"],
+                            )
+                            nl_length_radio = gr.Radio(
+                                label="NL Length target",
+                                choices=list(TOTAL_TAG_LENGTH.values()),
+                                value=TOTAL_TAG_LENGTH["LONG"],
+                            )
+                            ban_tags_textbox = gr.Textbox(
+                                label="Ban tags",
+                                info="Separate with comma. Regex supported.",
+                                value="",
+                                placeholder="umbrella, official.*, .*text, ...",
+                            )
+                            format_dropdown = gr.Dropdown(
+                                label="Prompt Format",
+                                info="The format you want to apply to final prompt",
+                                choices=list(TIPO_DEFAULT_FORMAT.keys()) + ["custom"],
+                                value="Both, tag first (recommend)",
+                            )
+                            format_textarea = gr.TextArea(
+                                value=TIPO_DEFAULT_FORMAT[
+                                    "Both, tag first (recommend)"
+                                ],
+                                label="Custom Prompt Format",
                                 visible=False,
-                                min_width=20,
+                                placeholder="<|extended|>. <|general|>",
                             )
-                        with gr.Column(scale=3):
-                            orig_prompt_area = gr.TextArea(visible=False)
-                            orig_prompt_light = gr.HTML("")
-                        orig_prompt_area.change(
-                            lambda x: PROMPT_INDICATE_HTML * bool(x),
-                            inputs=orig_prompt_area,
-                            outputs=orig_prompt_light,
-                        )
-                        orig_prompt_area.change(
-                            lambda x: gr.update(visible=bool(x)),
-                            inputs=orig_prompt_area,
-                            outputs=read_orig_prompt_btn,
-                        )
-                        read_orig_prompt_btn.click(
-                            fn=lambda x: x,
-                            inputs=[orig_prompt_area],
-                            outputs=self.prompt_area[is_img2img],
-                        )
+                            format_dropdown.change(
+                                lambda x: gr.update(
+                                    visible=x == "custom",
+                                    value=TIPO_DEFAULT_FORMAT.get(
+                                        x, list(TIPO_DEFAULT_FORMAT.values())[0]
+                                    ),
+                                ),
+                                inputs=format_dropdown,
+                                outputs=format_textarea,
+                            )
 
-                    tag_length_radio = gr.Radio(
-                        label="Tags Length target",
-                        choices=list(TOTAL_TAG_LENGTH.values()),
-                        value=TOTAL_TAG_LENGTH["LONG"],
-                    )
-                    nl_length_radio = gr.Radio(
-                        label="NL Length target",
-                        choices=list(TOTAL_TAG_LENGTH.values()),
-                        value=TOTAL_TAG_LENGTH["LONG"],
-                    )
-                    ban_tags_textbox = gr.Textbox(
-                        label="Ban tags",
-                        info="Separate with comma. Regex supported.",
-                        value="",
-                        placeholder="umbrella, official.*, .*text, ...",
-                    )
-                    format_dropdown = gr.Dropdown(
-                        label="Prompt Format",
-                        info="The format you want to apply to final prompt",
-                        choices=list(TIPO_DEFAULT_FORMAT.keys()) + ["custom"],
-                        value="Both, tag first (recommend)",
-                    )
-                    format_textarea = gr.TextArea(
-                        value=TIPO_DEFAULT_FORMAT["Both, tag first (recommend)"],
-                        label="Custom Prompt Format",
-                        visible=False,
-                        placeholder="<|extended|>. <|general|>",
-                    )
-                    format_dropdown.change(
-                        lambda x: gr.update(
-                            visible=x == "custom",
-                            value=TIPO_DEFAULT_FORMAT.get(
-                                x, list(TIPO_DEFAULT_FORMAT.values())[0]
-                            ),
-                        ),
-                        inputs=format_dropdown,
-                        outputs=format_textarea,
-                    )
+                            with gr.Group():
+                                with gr.Row():
+                                    seed_num_input = gr.Number(
+                                        label="Seed for upsampling tags",
+                                        minimum=-1,
+                                        maximum=2**31 - 1,
+                                        step=1,
+                                        scale=4,
+                                        value=-1,
+                                    )
+                                    seed_random_btn = gr.Button(value="Randomize")
+                                    seed_shuffle_btn = gr.Button(value="Shuffle")
 
-                    with gr.Group():
-                        with gr.Row():
-                            seed_num_input = gr.Number(
-                                label="Seed for upsampling tags",
-                                minimum=-1,
-                                maximum=2**31 - 1,
+                                    seed_random_btn.click(
+                                        lambda: -1, outputs=[seed_num_input]
+                                    )
+                                    seed_shuffle_btn.click(
+                                        lambda: random.randint(0, 2**31 - 1),
+                                        outputs=[seed_num_input],
+                                    )
+
+                            with gr.Group():
+                                process_timing_dropdown = gr.Dropdown(
+                                    label="Upsampling timing",
+                                    choices=list(PROCESSING_TIMING.values()),
+                                    value=PROCESSING_TIMING["AFTER"],
+                                )
+
+                                process_timing_md = gr.Markdown(
+                                    on_process_timing_dropdown_changed(
+                                        process_timing_dropdown.value
+                                    )
+                                )
+
+                                process_timing_dropdown.change(
+                                    on_process_timing_dropdown_changed,
+                                    inputs=[process_timing_dropdown],
+                                    outputs=[process_timing_md],
+                                )
+
+                        with gr.Column():
+                            gr.Markdown(RECOMMEND_MARKDOWN)
+                            model_dropdown = gr.Dropdown(
+                                label="Model",
+                                choices=MODEL_NAME_LIST,
+                                value=MODEL_NAME_LIST[0],
+                            )
+                            gguf_use_cpu = gr.Checkbox(label="Use CPU (GGUF)")
+                            no_formatting = gr.Checkbox(
+                                label="No formatting", value=False
+                            )
+                            temperature_slider = gr.Slider(
+                                label="Temperature",
+                                info="← less random | more random →",
+                                maximum=1.5,
+                                minimum=0.1,
+                                step=0.05,
+                                value=0.5,
+                            )
+                            top_p_slider = gr.Slider(
+                                label="Top-p",
+                                info="← less unconfident tokens | more unconfident tokens →",
+                                maximum=1,
+                                minimum=0,
+                                step=0.05,
+                                value=0.95,
+                            )
+                            top_k_slider = gr.Slider(
+                                label="Top-k",
+                                info="← less unconfident tokens | more unconfident tokens →",
+                                maximum=150,
+                                minimum=0,
                                 step=1,
-                                scale=4,
-                                value=-1,
-                            )
-                            seed_random_btn = gr.Button(value="Randomize")
-                            seed_shuffle_btn = gr.Button(value="Shuffle")
-
-                            seed_random_btn.click(lambda: -1, outputs=[seed_num_input])
-                            seed_shuffle_btn.click(
-                                lambda: random.randint(0, 2**31 - 1),
-                                outputs=[seed_num_input],
+                                value=80,
                             )
 
-                    with gr.Group():
-                        process_timing_dropdown = gr.Dropdown(
-                            label="Upsampling timing",
-                            choices=list(PROCESSING_TIMING.values()),
-                            value=PROCESSING_TIMING["AFTER"],
-                        )
+        aspect_ratio_place_holder = gr.Number(value=1.0, visible=False)
 
-                        process_timing_md = gr.Markdown(
-                            on_process_timing_dropdown_changed(
-                                process_timing_dropdown.value
-                            )
-                        )
-
-                        process_timing_dropdown.change(
-                            on_process_timing_dropdown_changed,
-                            inputs=[process_timing_dropdown],
-                            outputs=[process_timing_md],
-                        )
-
-                    with gr.Accordion(label="Generation config", open=False):
-                        gr.Markdown(RECOMMEND_MARKDOWN)
-                        model_dropdown = gr.Dropdown(
-                            label="Model",
-                            choices=MODEL_NAME_LIST,
-                            value=MODEL_NAME_LIST[0],
-                        )
-                        gguf_use_cpu = gr.Checkbox(label="Use CPU (GGUF)")
-                        no_formatting = gr.Checkbox(label="No formatting", value=False)
-                        temperature_slider = gr.Slider(
-                            label="Temperature",
-                            info="← less random | more random →",
-                            maximum=1.5,
-                            minimum=0.1,
-                            step=0.05,
-                            value=0.5,
-                        )
-                        top_p_slider = gr.Slider(
-                            label="Top-p",
-                            info="← less unconfident tokens | more unconfident tokens →",
-                            maximum=1,
-                            minimum=0,
-                            step=0.05,
-                            value=0.95,
-                        )
-                        top_k_slider = gr.Slider(
-                            label="Top-k",
-                            info="← less unconfident tokens | more unconfident tokens →",
-                            maximum=150,
-                            minimum=0,
-                            step=1,
-                            value=80,
-                        )
+        prompt_gen.click(
+            self._process,
+            inputs=[
+                self.tag_prompt_area[is_img2img],
+                self.prompt_area[is_img2img * 2 + 1],
+                aspect_ratio_place_holder,
+                seed_num_input,
+                tag_length_radio,
+                nl_length_radio,
+                ban_tags_textbox,
+                format_dropdown,
+                format_textarea,
+                temperature_slider,
+                top_p_slider,
+                top_k_slider,
+                model_dropdown,
+                gguf_use_cpu,
+                no_formatting,
+            ],
+            outputs=[
+                self.prompt_area[is_img2img * 2],
+            ],
+        )
 
         self.infotext_fields = [
             (
@@ -371,6 +418,7 @@ class TIPOScript(scripts.Script):
             gguf_use_cpu,
             no_formatting,
             self.prompt_area[is_img2img * 2 + 1],
+            self.tag_prompt_area[is_img2img],
         ]
 
     def get_infotext(self, d, target, default):
@@ -402,8 +450,8 @@ class TIPOScript(scripts.Script):
             },
             ensure_ascii=False,
         ).translate(QUOTESWAP)
-        p.extra_generation_params[INFOTEXT_KEY_PROMPT] = prompt
-        p.extra_generation_params[INFOTEXT_NL_PROMPT] = args[-1]
+        p.extra_generation_params[INFOTEXT_KEY_PROMPT] = prompt.strip() or args[-1]
+        p.extra_generation_params[INFOTEXT_NL_PROMPT] = args[-2]
         if args[3] != DEFAULT_FORMAT:
             p.extra_generation_params[INFOTEXT_KEY_FORMAT] = args[3]
 
@@ -504,7 +552,12 @@ class TIPOScript(scripts.Script):
         model: str,
         gguf_use_cpu: bool,
         no_formatting: bool,
+        tag_prompt: str,
     ):
+        prompt = prompt.strip() or tag_prompt
+        if seed == -1:
+            seed = random.randrange(2**31 - 1)
+        seed = int(seed) % SEED_MAX
         if model != self.current_model:
             if " | " in model:
                 model_name, gguf_name = model.split(" | ")
@@ -621,11 +674,28 @@ class TIPOScript(scripts.Script):
         return result
 
 
-def pares_infotext(_, params):
+def parse_infotext(_, params):
     try:
         params[INFOTEXT_KEY] = json.loads(params[INFOTEXT_KEY].translate(QUOTESWAP))
     except Exception:
         pass
 
 
-scripts.script_callbacks.on_infotext_pasted(pares_infotext)
+scripts.script_callbacks.on_infotext_pasted(parse_infotext)
+
+options.categories.register_category("prompt_gen", "Prompt Gen")
+shared.options_templates.update(
+    shared.options_section(
+        ("TIPO", "TIPO", "prompt_gen"),
+        {
+            "tipo_no_extra_input": shared.OptionInfo(
+                False,
+                (
+                    "Disable extra input for TIPO"
+                    ", Natural Language Prompt and Tag Prompt will be hidden."
+                    " (UI Reload Needed)"
+                ),
+            ),
+        },
+    )
+)
