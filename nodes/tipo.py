@@ -29,10 +29,10 @@ except Exception as e:
 try:
     import kgen
 
-    if kgen.__version__ < "0.1.4":
+    if kgen.__version__ < "0.1.5":
         raise ImportError
 except Exception as e:
-    os.system('pip install -U "tipo-kgen>=0.1.4"')
+    os.system('pip install -U "tipo-kgen>=0.1.5"')
 
 import torch
 import folder_paths
