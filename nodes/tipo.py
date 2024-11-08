@@ -246,6 +246,7 @@ class TIPO:
                     {"default": "long"},
                 ),
                 "seed": ("INT", {"default": 1234}),
+                "device": (["cpu", "cuda"], {"default": "cuda"}),
             },
         }
 
@@ -275,9 +276,10 @@ class TIPO:
         top_p: float,
         min_p: float,
         top_k: int,
+        device: str,
     ):
         global current_model
-        if tipo_model != current_model:
+        if (tipo_model, device) != current_model:
             if " | " in tipo_model:
                 model_name, gguf_name = tipo_model.split(" | ")
                 target_file = f"{model_name.split('/')[-1]}_{gguf_name}"
@@ -288,8 +290,8 @@ class TIPO:
             else:
                 target = tipo_model
                 gguf = False
-            models.load_model(target, gguf, device="cuda")
-            current_model = tipo_model
+            models.load_model(target, gguf, device=device)
+            current_model = (tipo_model, device)
         aspect_ratio = width / height
         prompt_without_extranet = tags
         prompt_parse_strength = parse_prompt_attention(prompt_without_extranet)
@@ -418,6 +420,7 @@ class TIPOOperation:
                     {"default": "long"},
                 ),
                 "seed": ("INT", {"default": 1234}),
+                "device": (["cpu", "cuda"], {"default": "cuda"}),
             },
         }
 
@@ -445,9 +448,10 @@ class TIPOOperation:
         top_p: float,
         min_p: float,
         top_k: int,
+        device: str,
     ):
         global current_model
-        if tipo_model != current_model:
+        if (tipo_model, device) != current_model:
             if " | " in tipo_model:
                 model_name, gguf_name = tipo_model.split(" | ")
                 target_file = f"{model_name.split('/')[-1]}_{gguf_name}"
@@ -458,8 +462,8 @@ class TIPOOperation:
             else:
                 target = tipo_model
                 gguf = False
-            models.load_model(target, gguf, device="cuda")
-            current_model = tipo_model
+            models.load_model(target, gguf, device=device)
+            current_model = (tipo_model, device)
         aspect_ratio = width / height
         prompt_without_extranet = tags
         prompt_parse_strength = parse_prompt_attention(prompt_without_extranet)
@@ -584,7 +588,6 @@ class TIPOFormat:
         nl_prompt = addon_output.pop("user_nl", "")
         addon = addon_output
         tag_map = full_output
-        print(tags, nl_prompt)
 
         prompt_without_extranet = tags
         prompt_parse_strength = parse_prompt_attention(prompt_without_extranet)
