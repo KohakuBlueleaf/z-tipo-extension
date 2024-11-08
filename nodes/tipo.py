@@ -41,9 +41,11 @@ import kgen.models as models
 import kgen.executor.tipo as tipo
 from kgen.executor.tipo import (
     parse_tipo_request,
+    tipo_single_request,
     tipo_runner,
     apply_tipo_prompt,
     parse_tipo_result,
+    OPERATION_LIST,
 )
 from kgen.formatter import seperate_tags, apply_format
 from kgen.metainfo import TARGET
@@ -175,11 +177,37 @@ def parse_prompt_attention(text):
     return res
 
 
+def apply_strength(tag_map, strength_map, strength_map_nl):
+    for cate in tag_map.keys():
+        new_list = []
+        # Skip natural language output at first
+        if isinstance(tag_map[cate], str):
+            # Ensure all the parts in the strength_map are in the prompt
+            if all(part in tag_map[cate] for part, strength in strength_map_nl):
+                org_prompt = tag_map[cate]
+                new_prompt = ""
+                for part, strength in strength_map_nl:
+                    before, org_prompt = org_prompt.split(part, 1)
+                    new_prompt += before.replace("(", "\(").replace(")", "\)")
+                    part = part.replace("(", "\(").replace(")", "\)")
+                    new_prompt += f"({part}:{strength})"
+                new_prompt += org_prompt
+            tag_map[cate] = new_prompt
+            continue
+        for org_tag in tag_map[cate]:
+            tag = org_tag.replace("(", "\(").replace(")", "\)")
+            if org_tag in strength_map:
+                new_list.append(f"({tag}:{strength_map[org_tag]})")
+            else:
+                new_list.append(tag)
+        tag_map[cate] = new_list
+    return tag_map
+
+
+current_model = None
+
+
 class TIPO:
-
-    def __init__(self):
-        self.current_model = None
-
     @classmethod
     def INPUT_TYPES(cls):
         return {
@@ -248,7 +276,8 @@ class TIPO:
         min_p: float,
         top_k: int,
     ):
-        if tipo_model != self.current_model:
+        global current_model
+        if tipo_model != current_model:
             if " | " in tipo_model:
                 model_name, gguf_name = tipo_model.split(" | ")
                 target_file = f"{model_name.split('/')[-1]}_{gguf_name}"
@@ -260,7 +289,7 @@ class TIPO:
                 target = tipo_model
                 gguf = False
             models.load_model(target, gguf, device="cuda")
-            self.current_model = tipo_model
+            current_model = tipo_model
         aspect_ratio = width / height
         prompt_without_extranet = tags
         prompt_parse_strength = parse_prompt_attention(prompt_without_extranet)
@@ -286,32 +315,6 @@ class TIPO:
             for tag in part_tags:
                 strength_map[tag] = strength
 
-        def apply_strength(tag_map):
-            for cate in tag_map.keys():
-                new_list = []
-                # Skip natural language output at first
-                if isinstance(tag_map[cate], str):
-                    # Ensure all the parts in the strength_map are in the prompt
-                    if all(part in tag_map[cate] for part, strength in strength_map_nl):
-                        org_prompt = tag_map[cate]
-                        new_prompt = ""
-                        for part, strength in strength_map_nl:
-                            before, org_prompt = org_prompt.split(part, 1)
-                            new_prompt += before.replace("(", "\(").replace(")", "\)")
-                            part = part.replace("(", "\(").replace(")", "\)")
-                            new_prompt += f"({part}:{strength})"
-                        new_prompt += org_prompt
-                    tag_map[cate] = new_prompt
-                    continue
-                for org_tag in tag_map[cate]:
-                    tag = org_tag.replace("(", "\(").replace(")", "\)")
-                    if org_tag in strength_map:
-                        new_list.append(f"({tag}:{strength_map[org_tag]})")
-                    else:
-                        new_list.append(tag)
-                tag_map[cate] = new_list
-            return tag_map
-
         tag_length = tag_length.replace(" ", "_")
         org_tag_map = seperate_tags(all_tags)
         meta, operations, general, nl_prompt = parse_tipo_request(
@@ -335,7 +338,9 @@ class TIPO:
                 gen_meta=True,
             )
         )
-        org_formatted_prompt = apply_strength(org_formatted_prompt)
+        org_formatted_prompt = apply_strength(
+            org_formatted_prompt, strength_map, strength_map_nl
+        )
         formatted_prompt_by_user = apply_format(org_formatted_prompt, format)
         unformatted_prompt_by_user = tags + nl_prompt
 
@@ -369,13 +374,267 @@ class TIPO:
                 if tag in org_tag_map[cate]:
                     continue
                 addon["tags"].append(tag)
-        addon = apply_strength(addon)
+        addon = apply_strength(addon, strength_map, strength_map_nl)
         unformatted_prompt_by_tipo = (
             tags + ", " + ", ".join(addon["tags"]) + "\n" + addon["nl"]
         )
 
-        tag_map = apply_strength(tag_map)
+        tag_map = apply_strength(tag_map, strength_map, strength_map_nl)
         formatted_prompt_by_tipo = apply_format(tag_map, format)
+        return (
+            formatted_prompt_by_tipo,
+            formatted_prompt_by_user,
+            unformatted_prompt_by_tipo,
+            unformatted_prompt_by_user,
+        )
+
+
+class TIPOOperation:
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "tags": ("STRING", {"default": "", "multiline": True}),
+                "nl_prompt": ("STRING", {"default": "", "multiline": True}),
+                "ban_tags": ("STRING", {"default": "", "multiline": True}),
+                "tipo_model": (MODEL_NAME_LIST, {"default": MODEL_NAME_LIST[0]}),
+                "operation": (
+                    sorted(OPERATION_LIST),
+                    {"default": sorted(OPERATION_LIST)[0]},
+                ),
+                "width": ("INT", {"default": 1024, "max": 16384}),
+                "height": ("INT", {"default": 1024, "max": 16384}),
+                "temperature": ("FLOAT", {"default": 0.5, "step": 0.01}),
+                "top_p": ("FLOAT", {"default": 0.95, "step": 0.01}),
+                "min_p": ("FLOAT", {"default": 0.05, "step": 0.01}),
+                "top_k": ("INT", {"default": 80}),
+                "tag_length": (
+                    ["very_short", "short", "long", "very_long"],
+                    {"default": "long"},
+                ),
+                "nl_length": (
+                    ["very_short", "short", "long", "very_long"],
+                    {"default": "long"},
+                ),
+                "seed": ("INT", {"default": 1234}),
+            },
+        }
+
+    RETURN_TYPES = ("LIST", "LIST")
+    RETURN_NAMES = (
+        "full_output",
+        "addon_output",
+    )
+    FUNCTION = "execute"
+    CATEGORY = "utils/promptgen"
+
+    def execute(
+        self,
+        tipo_model: str,
+        tags: str,
+        nl_prompt: str,
+        width: int,
+        height: int,
+        seed: int,
+        tag_length: str,
+        nl_length: str,
+        ban_tags: str,
+        operation: str,
+        temperature: float,
+        top_p: float,
+        min_p: float,
+        top_k: int,
+    ):
+        global current_model
+        if tipo_model != current_model:
+            if " | " in tipo_model:
+                model_name, gguf_name = tipo_model.split(" | ")
+                target_file = f"{model_name.split('/')[-1]}_{gguf_name}"
+                if str(models.model_dir / target_file) not in models.list_gguf():
+                    models.download_gguf(model_name, gguf_name)
+                target = os.path.join(str(models.model_dir), target_file)
+                gguf = True
+            else:
+                target = tipo_model
+                gguf = False
+            models.load_model(target, gguf, device="cuda")
+            current_model = tipo_model
+        aspect_ratio = width / height
+        prompt_without_extranet = tags
+        prompt_parse_strength = parse_prompt_attention(prompt_without_extranet)
+
+        nl_prompt_wihtout_extranet = nl_prompt
+        nl_prompt_parse_strength = parse_prompt_attention(nl_prompt)
+        nl_prompt = ""
+        strength_map_nl = []
+        for part, strength in nl_prompt_parse_strength:
+            nl_prompt += part
+            if strength == 1:
+                continue
+            strength_map_nl.append((part, strength))
+
+        black_list = [tag.strip() for tag in ban_tags.split(",") if tag.strip()]
+        tipo.BAN_TAGS = black_list
+        all_tags = []
+        strength_map = {}
+        for part, strength in prompt_parse_strength:
+            part_tags = [tag.strip() for tag in part.strip().split(",") if tag.strip()]
+            all_tags.extend(part_tags)
+            if strength == 1:
+                continue
+            for tag in part_tags:
+                strength_map[tag] = strength
+
+        tag_length = tag_length.replace(" ", "_")
+        org_tag_map = seperate_tags(all_tags)
+        meta, operations, general, nl_prompt = tipo_single_request(
+            org_tag_map,
+            nl_prompt,
+            tag_length_target=tag_length,
+            nl_length_target=nl_length,
+            operation=operation,
+        )
+        meta["aspect_ratio"] = f"{aspect_ratio:.1f}"
+
+        tag_map, _ = tipo_runner(
+            meta,
+            operations,
+            general,
+            nl_prompt,
+            temperature=temperature,
+            seed=seed,
+            top_p=top_p,
+            min_p=min_p,
+            top_k=top_k,
+        )
+
+        addon = {
+            "tags": [],
+            "nl": "",
+        }
+        for cate in tag_map.keys():
+            if cate == "generated" and addon["nl"] == "":
+                addon["nl"] = tag_map[cate]
+                continue
+            if cate == "extended":
+                extended = tag_map[cate]
+                addon["nl"] = extended
+                continue
+            if cate not in org_tag_map:
+                continue
+            for tag in tag_map[cate]:
+                if tag in org_tag_map[cate]:
+                    continue
+                addon["tags"].append(tag)
+        addon = apply_strength(addon, strength_map, strength_map_nl)
+        addon["user_tags"] = prompt_without_extranet
+        addon["user_nl"] = nl_prompt_wihtout_extranet
+
+        tag_map = apply_strength(tag_map, strength_map, strength_map_nl)
+        return (
+            tag_map,
+            addon,
+        )
+
+
+class TIPOFormat:
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "full_output": ("LIST", {"default": []}),
+                "addon_output": ("LIST", {"default": []}),
+                "format": (
+                    "STRING",
+                    {
+                        "default": """<|special|>, 
+<|characters|>, <|copyrights|>, 
+<|artist|>, 
+
+<|general|>,
+
+<|extended|>.
+
+<|quality|>, <|meta|>, <|rating|>""",
+                        "multiline": True,
+                    },
+                ),
+            },
+        }
+
+    RETURN_TYPES = ("STRING", "STRING", "STRING", "STRING")
+    RETURN_NAMES = (
+        "prompt",
+        "user_prompt",
+        "unformatted_prompt",
+        "unformatted_user_prompt",
+    )
+    FUNCTION = "execute"
+    CATEGORY = "utils/promptgen"
+
+    def execute(
+        self,
+        full_output: list,
+        addon_output: list,
+        format: str,
+    ):
+        tags = addon_output.pop("user_tags", "")
+        nl_prompt = addon_output.pop("user_nl", "")
+        addon = addon_output
+        tag_map = full_output
+        print(tags, nl_prompt)
+
+        prompt_without_extranet = tags
+        prompt_parse_strength = parse_prompt_attention(prompt_without_extranet)
+
+        nl_prompt_parse_strength = parse_prompt_attention(nl_prompt)
+        nl_prompt = ""
+        strength_map_nl = []
+        for part, strength in nl_prompt_parse_strength:
+            nl_prompt += part
+            if strength == 1:
+                continue
+            strength_map_nl.append((part, strength))
+
+        all_tags = []
+        strength_map = {}
+        for part, strength in prompt_parse_strength:
+            part_tags = [tag.strip() for tag in part.strip().split(",") if tag.strip()]
+            all_tags.extend(part_tags)
+            if strength == 1:
+                continue
+            for tag in part_tags:
+                strength_map[tag] = strength
+
+        org_tag_map = seperate_tags(all_tags)
+        meta, operations, general, nl_prompt = parse_tipo_request(
+            org_tag_map,
+            nl_prompt,
+        )
+
+        org_formatted_prompt = parse_tipo_result(
+            apply_tipo_prompt(
+                meta,
+                general,
+                nl_prompt,
+                "short_to_tag_to_long",
+                "long",
+                True,
+                gen_meta=True,
+            )
+        )
+        org_formatted_prompt = apply_strength(
+            org_formatted_prompt, strength_map, strength_map_nl
+        )
+        formatted_prompt_by_user = apply_format(org_formatted_prompt, format)
+        unformatted_prompt_by_user = tags + nl_prompt
+        formatted_prompt_by_tipo = apply_format(tag_map, format)
+        unformatted_prompt_by_tipo = (
+            tags + ", " + ", ".join(addon["tags"]) + "\n" + addon["nl"]
+        )
+
         return (
             formatted_prompt_by_tipo,
             formatted_prompt_by_user,
@@ -386,8 +645,12 @@ class TIPO:
 
 NODE_CLASS_MAPPINGS = {
     "TIPO": TIPO,
+    "TIPOOperation": TIPOOperation,
+    "TIPOFormat": TIPOFormat,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
     "TIPO": "TIPO",
+    "TIPOOperation": "TIPO Single Operation",
+    "TIPOFormat": "TIPO Format",
 }
