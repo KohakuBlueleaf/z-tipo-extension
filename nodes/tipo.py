@@ -29,7 +29,7 @@ except Exception as e:
 try:
     import kgen
 
-    if kgen.__version__ < "0.1.6":
+    if kgen.__version__ < "0.1.9":
         raise ImportError
 except Exception as e:
     os.system('pip install -U "tipo-kgen>=0.1.6"')
