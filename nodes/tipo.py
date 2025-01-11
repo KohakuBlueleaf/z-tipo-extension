@@ -2,40 +2,12 @@ import os
 import re
 from pathlib import Path
 
-llama_cpp_python_wheel = (
-    "llama-cpp-python --prefer-binary "
-    "--extra-index-url=https://jllllll.github.io/llama-cpp-python-cuBLAS-wheels/{}/{}"
-)
-try:
-    import llama_cpp
-except Exception as e:
-    print("Attempting to install LLaMA-CPP-Python")
-    import torch
-
-    has_cuda = torch.cuda.is_available()
-    cuda_version = torch.version.cuda.replace(".", "")
-    if cuda_version == "124":
-        cuda_version = "122"
-    package = llama_cpp_python_wheel.format(
-        "AVX2", f"cu{cuda_version}" if has_cuda else "cpu"
-    )
-    os.system(f"pip install {package}")
-
-try:
-    import llama_cpp
-except Exception as e:
-    llama_cpp = None
-
-try:
-    import kgen
-
-    if kgen.__version__ < "0.1.9":
-        raise ImportError
-except Exception as e:
-    os.system('pip install -U "tipo-kgen>=0.1.6"')
-
 import torch
 import folder_paths
+
+from ..installer import install_tipo_kgen, install_llama_cpp
+install_llama_cpp()
+install_tipo_kgen()
 
 import kgen.models as models
 import kgen.executor.tipo as tipo
