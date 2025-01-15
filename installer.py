@@ -106,8 +106,7 @@ def install_llama_cpp_legacy(cuda_version, has_cuda):
     )
 
     run_pip(
-        f"install {package}",
-        "LLaMA-CPP-Python for TIPO",
+        f"install {package}"
     )
 
 

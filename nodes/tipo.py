@@ -1,6 +1,7 @@
 import os
 import re
 from pathlib import Path
+from typing import Any
 
 import torch
 import folder_paths
@@ -553,7 +554,7 @@ class TIPOFormat:
     def execute(
         self,
         full_output: list,
-        addon_output: list,
+        addon_output: dict[str, Any],
         format: str,
     ):
         tags = addon_output.pop("user_tags", "")
