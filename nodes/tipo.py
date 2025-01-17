@@ -7,6 +7,7 @@ import torch
 import folder_paths
 
 from ..installer import install_tipo_kgen, install_llama_cpp
+
 install_llama_cpp()
 install_tipo_kgen()
 
@@ -21,7 +22,6 @@ from kgen.executor.tipo import (
     OPERATION_LIST,
 )
 from kgen.formatter import seperate_tags, apply_format
-from kgen.metainfo import TARGET
 from kgen.logging import logger
 
 
@@ -37,22 +37,23 @@ MODEL_NAME_LIST = [
 ] + [i[0] for i in models.tipo_model_list]
 
 
+attn_syntax = (
+    r"\\\(|"
+    r"\\\)|"
+    r"\\\[|"
+    r"\\]|"
+    r"\\\\|"
+    r"\\|"
+    r"\(|"
+    r"\[|"
+    r":\s*([+-]?[.\d]+)\s*\)|"
+    r"\)|"
+    r"]|"
+    r"[^\\()\[\]:]+|"
+    r":"
+)
 re_attention = re.compile(
-    r"""
-\\\(|
-\\\)|
-\\\[|
-\\]|
-\\\\|
-\\|
-\(|
-\[|
-:\s*([+-]?[.\d]+)\s*\)|
-\)|
-]|
-[^\\()\[\]:]+|
-:
-""",
+    attn_syntax,
     re.X,
 )
 
@@ -179,20 +180,22 @@ def apply_strength(tag_map, strength_map, strength_map_nl):
 
 current_model = None
 
+# Constants
+FUNCTION = "execute"
+CATEGORY = "utils/promptgen"
+
 
 class TIPO:
-    @classmethod
-    def INPUT_TYPES(cls):
-        return {
-            "required": {
-                "tags": ("STRING", {"default": "", "multiline": True}),
-                "nl_prompt": ("STRING", {"default": "", "multiline": True}),
-                "ban_tags": ("STRING", {"default": "", "multiline": True}),
-                "tipo_model": (MODEL_NAME_LIST, {"default": MODEL_NAME_LIST[0]}),
-                "format": (
-                    "STRING",
-                    {
-                        "default": """<|special|>, 
+    INPUT_TYPES = lambda: {
+        "required": {
+            "tags": ("STRING", {"default": "", "multiline": True}),
+            "nl_prompt": ("STRING", {"default": "", "multiline": True}),
+            "ban_tags": ("STRING", {"default": "", "multiline": True}),
+            "tipo_model": (MODEL_NAME_LIST, {"default": MODEL_NAME_LIST[0]}),
+            "format": (
+                "STRING",
+                {
+                    "default": """<|special|>, 
 <|characters|>, <|copyrights|>, 
 <|artist|>, 
 
@@ -201,27 +204,27 @@ class TIPO:
 <|extended|>.
 
 <|quality|>, <|meta|>, <|rating|>""",
-                        "multiline": True,
-                    },
-                ),
-                "width": ("INT", {"default": 1024, "max": 16384}),
-                "height": ("INT", {"default": 1024, "max": 16384}),
-                "temperature": ("FLOAT", {"default": 0.5, "step": 0.01}),
-                "top_p": ("FLOAT", {"default": 0.95, "step": 0.01}),
-                "min_p": ("FLOAT", {"default": 0.05, "step": 0.01}),
-                "top_k": ("INT", {"default": 80}),
-                "tag_length": (
-                    ["very_short", "short", "long", "very_long"],
-                    {"default": "long"},
-                ),
-                "nl_length": (
-                    ["very_short", "short", "long", "very_long"],
-                    {"default": "long"},
-                ),
-                "seed": ("INT", {"default": 1234}),
-                "device": (["cpu", "cuda"], {"default": "cuda"}),
-            },
-        }
+                    "multiline": True,
+                },
+            ),
+            "width": ("INT", {"default": 1024, "max": 16384}),
+            "height": ("INT", {"default": 1024, "max": 16384}),
+            "temperature": ("FLOAT", {"default": 0.5, "step": 0.01}),
+            "top_p": ("FLOAT", {"default": 0.95, "step": 0.01}),
+            "min_p": ("FLOAT", {"default": 0.05, "step": 0.01}),
+            "top_k": ("INT", {"default": 80}),
+            "tag_length": (
+                ["very_short", "short", "long", "very_long"],
+                {"default": "long"},
+            ),
+            "nl_length": (
+                ["very_short", "short", "long", "very_long"],
+                {"default": "long"},
+            ),
+            "seed": ("INT", {"default": 1234}),
+            "device": (["cpu", "cuda"], {"default": "cuda"}),
+        },
+    }
 
     RETURN_TYPES = ("STRING", "STRING", "STRING", "STRING")
     RETURN_NAMES = (
@@ -230,8 +233,8 @@ class TIPO:
         "unformatted_prompt",
         "unformatted_user_prompt",
     )
-    FUNCTION = "execute"
-    CATEGORY = "utils/promptgen"
+    FUNCTION = FUNCTION
+    CATEGORY = CATEGORY
 
     def execute(
         self,
@@ -365,45 +368,42 @@ class TIPO:
 
 
 class TIPOOperation:
-
-    @classmethod
-    def INPUT_TYPES(cls):
-        return {
-            "required": {
-                "tags": ("STRING", {"default": "", "multiline": True}),
-                "nl_prompt": ("STRING", {"default": "", "multiline": True}),
-                "ban_tags": ("STRING", {"default": "", "multiline": True}),
-                "tipo_model": (MODEL_NAME_LIST, {"default": MODEL_NAME_LIST[0]}),
-                "operation": (
-                    sorted(OPERATION_LIST),
-                    {"default": sorted(OPERATION_LIST)[0]},
-                ),
-                "width": ("INT", {"default": 1024, "max": 16384}),
-                "height": ("INT", {"default": 1024, "max": 16384}),
-                "temperature": ("FLOAT", {"default": 0.5, "step": 0.01}),
-                "top_p": ("FLOAT", {"default": 0.95, "step": 0.01}),
-                "min_p": ("FLOAT", {"default": 0.05, "step": 0.01}),
-                "top_k": ("INT", {"default": 80}),
-                "tag_length": (
-                    ["very_short", "short", "long", "very_long"],
-                    {"default": "long"},
-                ),
-                "nl_length": (
-                    ["very_short", "short", "long", "very_long"],
-                    {"default": "long"},
-                ),
-                "seed": ("INT", {"default": 1234}),
-                "device": (["cpu", "cuda"], {"default": "cuda"}),
-            },
-        }
+    INPUT_TYPES = lambda: {
+        "required": {
+            "tags": ("STRING", {"default": "", "multiline": True}),
+            "nl_prompt": ("STRING", {"default": "", "multiline": True}),
+            "ban_tags": ("STRING", {"default": "", "multiline": True}),
+            "tipo_model": (MODEL_NAME_LIST, {"default": MODEL_NAME_LIST[0]}),
+            "operation": (
+                sorted(OPERATION_LIST),
+                {"default": sorted(OPERATION_LIST)[0]},
+            ),
+            "width": ("INT", {"default": 1024, "max": 16384}),
+            "height": ("INT", {"default": 1024, "max": 16384}),
+            "temperature": ("FLOAT", {"default": 0.5, "step": 0.01}),
+            "top_p": ("FLOAT", {"default": 0.95, "step": 0.01}),
+            "min_p": ("FLOAT", {"default": 0.05, "step": 0.01}),
+            "top_k": ("INT", {"default": 80}),
+            "tag_length": (
+                ["very_short", "short", "long", "very_long"],
+                {"default": "long"},
+            ),
+            "nl_length": (
+                ["very_short", "short", "long", "very_long"],
+                {"default": "long"},
+            ),
+            "seed": ("INT", {"default": 1234}),
+            "device": (["cpu", "cuda"], {"default": "cuda"}),
+        },
+    }
 
     RETURN_TYPES = ("LIST", "LIST")
     RETURN_NAMES = (
         "full_output",
         "addon_output",
     )
-    FUNCTION = "execute"
-    CATEGORY = "utils/promptgen"
+    FUNCTION = FUNCTION
+    CATEGORY = CATEGORY
 
     def execute(
         self,
@@ -516,17 +516,14 @@ class TIPOOperation:
 
 
 class TIPOFormat:
-
-    @classmethod
-    def INPUT_TYPES(cls):
-        return {
-            "required": {
-                "full_output": ("LIST", {"default": []}),
-                "addon_output": ("LIST", {"default": []}),
-                "format": (
-                    "STRING",
-                    {
-                        "default": """<|special|>, 
+    INPUT_TYPES = lambda: {
+        "required": {
+            "full_output": ("LIST", {"default": []}),
+            "addon_output": ("LIST", {"default": []}),
+            "format": (
+                "STRING",
+                {
+                    "default": """<|special|>, 
 <|characters|>, <|copyrights|>, 
 <|artist|>, 
 
@@ -535,12 +532,11 @@ class TIPOFormat:
 <|extended|>.
 
 <|quality|>, <|meta|>, <|rating|>""",
-                        "multiline": True,
-                    },
-                ),
-            },
-        }
-
+                    "multiline": True,
+                },
+            ),
+        },
+    }
     RETURN_TYPES = ("STRING", "STRING", "STRING", "STRING")
     RETURN_NAMES = (
         "prompt",
@@ -548,8 +544,8 @@ class TIPOFormat:
         "unformatted_prompt",
         "unformatted_user_prompt",
     )
-    FUNCTION = "execute"
-    CATEGORY = "utils/promptgen"
+    FUNCTION = FUNCTION
+    CATEGORY = CATEGORY
 
     def execute(
         self,
@@ -585,7 +581,7 @@ class TIPOFormat:
                 strength_map[tag] = strength
 
         org_tag_map = seperate_tags(all_tags)
-        meta, operations, general, nl_prompt = parse_tipo_request(
+        meta, _, general, nl_prompt = parse_tipo_request(
             org_tag_map,
             nl_prompt,
         )

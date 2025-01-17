@@ -12,6 +12,7 @@ import subprocess
 KGEN_VERSION = "0.1.9"
 python = sys.executable
 
+
 def run(command) -> str:
     run_kwargs = {
         "args": command,
@@ -105,9 +106,7 @@ def install_llama_cpp_legacy(cuda_version, has_cuda):
         "AVX2", f"cu{cuda_version}" if has_cuda else "cpu"
     )
 
-    run_pip(
-        f"install {package}"
-    )
+    run_pip(f"install {package}")
 
 
 def install_llama_cpp():
@@ -144,9 +143,7 @@ def install_llama_cpp():
     )
 
     try:
-        run_pip(
-            f"install {wheel}"
-        )
+        run_pip(f"install {wheel}")
         logger.info("Installation of llama-cpp-python succeeded")
     except Exception:
         logger.warning(
@@ -160,6 +157,4 @@ def install_tipo_kgen():
     if version is not None and version >= KGEN_VERSION:
         return
     logger.info("Attempting to install tipo_kgen")
-    run_pip(
-        f'install -U "tipo-kgen>={KGEN_VERSION}"'
-    )
+    run_pip(f'install -U "tipo-kgen>={KGEN_VERSION}"')
