@@ -9,7 +9,7 @@ import pkg_resources
 import subprocess
 
 
-KGEN_VERSION = "0.1.9"
+KGEN_VERSION = "0.2.0"
 python = sys.executable
 
 
