@@ -35,7 +35,7 @@ version_arch = {
 
 
 def install_llama_cpp_legacy(cuda_version, has_cuda):
-    if cuda_version == "124":
+    if cuda_version >= "122":
         cuda_version = "122"
     package = llama_cpp_python_wheel.format(
         "AVX2", f"cu{cuda_version}" if has_cuda else "cpu"
@@ -56,6 +56,8 @@ def install_llama_cpp():
     has_cuda = torch.cuda.is_available()
     cuda_version = torch.version.cuda.replace(".", "")
     arch = "cu" + cuda_version if has_cuda else "cpu"
+    if has_cuda and arch >= "cu124":
+        arch = "cu124"
     platform = sys.platform
     py_ver = f"cp{sys.version_info.major}{sys.version_info.minor}"
     if platform == "darwin":
