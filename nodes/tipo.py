@@ -294,6 +294,7 @@ class TIPO:
                 strength_map[tag] = strength
 
         tag_length = tag_length.replace(" ", "_")
+        nl_length = nl_length.replace(" ", "_")
         org_tag_map = seperate_tags(all_tags)
         meta, operations, general, nl_prompt = parse_tipo_request(
             org_tag_map,
