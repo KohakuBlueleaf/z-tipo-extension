@@ -188,9 +188,9 @@ CATEGORY = "utils/promptgen"
 class TIPO:
     INPUT_TYPES = lambda: {
         "required": {
-            "tags": ("STRING", {"default": "", "multiline": True}),
-            "nl_prompt": ("STRING", {"default": "", "multiline": True}),
-            "ban_tags": ("STRING", {"default": "", "multiline": True}),
+            "tags": ("STRING", {"defaultInput": True, "multiline": True}),
+            "nl_prompt": ("STRING", {"defaultInput": True, "multiline": True}),
+            "ban_tags": ("STRING", {"defaultInput": True, "multiline": True}),
             "tipo_model": (MODEL_NAME_LIST, {"default": MODEL_NAME_LIST[0]}),
             "format": (
                 "STRING",
@@ -371,9 +371,9 @@ class TIPO:
 class TIPOOperation:
     INPUT_TYPES = lambda: {
         "required": {
-            "tags": ("STRING", {"default": "", "multiline": True}),
-            "nl_prompt": ("STRING", {"default": "", "multiline": True}),
-            "ban_tags": ("STRING", {"default": "", "multiline": True}),
+            "tags": ("STRING", {"defaultInput": True, "multiline": True}),
+            "nl_prompt": ("STRING", {"defaultInput": True, "multiline": True}),
+            "ban_tags": ("STRING", {"defaultInput": True, "multiline": True}),
             "tipo_model": (MODEL_NAME_LIST, {"default": MODEL_NAME_LIST[0]}),
             "operation": (
                 sorted(OPERATION_LIST),

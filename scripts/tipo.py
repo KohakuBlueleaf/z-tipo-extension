@@ -418,8 +418,8 @@ class TIPOScript(scripts.Script):
             model_dropdown,
             gguf_use_cpu,
             no_formatting,
-            self.prompt_area[is_img2img * 2 + 1],
             self.tag_prompt_area[is_img2img],
+            self.prompt_area[is_img2img * 2 + 1],
         ]
 
     def get_infotext(self, d, target, default):
@@ -543,7 +543,6 @@ class TIPOScript(scripts.Script):
             args[3] = seed
         return self._process(*args)
 
-    @lru_cache(128)
     def _process(
         self,
         prompt: str,
