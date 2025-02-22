@@ -6,7 +6,7 @@ from typing import Any
 import torch
 import folder_paths
 
-from ..installer import install_tipo_kgen, install_llama_cpp
+from ..tipo_installer import install_tipo_kgen, install_llama_cpp
 
 install_llama_cpp()
 install_tipo_kgen()
