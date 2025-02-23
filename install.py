@@ -2,7 +2,7 @@ import sys
 import pkg_resources
 
 import launch
-from installer import logger, KGEN_VERSION
+from tipo_installer import logger, KGEN_VERSION
 
 
 def get_installed_version(package: str):
