@@ -442,7 +442,7 @@ class TIPOOperation:
         prompt_without_extranet = tags
         prompt_parse_strength = parse_prompt_attention(prompt_without_extranet)
 
-        nl_prompt_wihtout_extranet = nl_prompt
+        nl_prompt_without_extranet = nl_prompt
         nl_prompt_parse_strength = parse_prompt_attention(nl_prompt)
         nl_prompt = ""
         strength_map_nl = []
@@ -507,7 +507,7 @@ class TIPOOperation:
                 addon["tags"].append(tag)
         addon = apply_strength(addon, strength_map, strength_map_nl)
         addon["user_tags"] = prompt_without_extranet
-        addon["user_nl"] = nl_prompt_wihtout_extranet
+        addon["user_nl"] = nl_prompt_without_extranet
 
         tag_map = apply_strength(tag_map, strength_map, strength_map_nl)
         return (
