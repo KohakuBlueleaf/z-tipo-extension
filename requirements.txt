@@ -1,2 +1,2 @@
-tipo-kgen>=0.1.9
 transformers
+git+https://github.com/dae-sun/KGen.git
