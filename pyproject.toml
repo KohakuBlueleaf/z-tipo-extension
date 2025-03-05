@@ -12,4 +12,4 @@ Repository = "https://github.com/KohakuBlueleaf/z-tipo-extension"
 [tool.comfy]
 PublisherId = "kblueleaf"
 DisplayName = "z-tipo-extension"
-Icon = ""
+Icon = "https://kblueleaf.net/_astro/tipo-icon.rYgN1nzC.jpg"
