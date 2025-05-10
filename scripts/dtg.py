@@ -65,7 +65,7 @@ PROMPT_INDICATE_HTML = """
 </div>
 """
 RECOMMEND_MARKDOWN = """
-### Rcommended Model and Settings:
+### Recommended Model and Settings:
 - Model: DanTagGen-delta-rev2
     - gguf quant: Q6 or Q8
     - gguf device: cpu (cuda have reproducibility issue)
@@ -409,8 +409,8 @@ class DTGScript(scripts.Script):
                 gguf = False
             models.load_model(target, gguf, device="cpu" if gguf_use_cpu else "cuda")
             self.current_model = model
-        propmt_preview = prompt.replace("\n", " ")[:40]
-        logger.info(f"Processing propmt: {propmt_preview}...")
+        prompt_preview = prompt.replace("\n", " ")[:40]
+        logger.info(f"Processing prompt: {prompt_preview}...")
         logger.info(f"Processing with seed: {seed}")
         prompt_without_extranet, res = parse_prompt(prompt)
         prompt_parse_strength = parse_prompt_attention(prompt_without_extranet)
