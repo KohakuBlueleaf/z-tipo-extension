@@ -65,7 +65,7 @@ PROMPT_INDICATE_HTML = """
 </div>
 """
 RECOMMEND_MARKDOWN = """
-### Rcommended Model and Settings:
+### Recommended Model and Settings:
 - Model: DanTagGen-delta-rev2
     - gguf quant: Q6 or Q8
     - gguf device: cpu (cuda have reproducibility issue)
