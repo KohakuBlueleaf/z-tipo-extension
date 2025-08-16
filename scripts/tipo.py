@@ -81,7 +81,7 @@ PROMPT_INDICATE_HTML = """
 </div>
 """
 RECOMMEND_MARKDOWN = """
-### Rcommended Model and Settings:
+### Recommended Model and Settings:
 
 """
 MODEL_NAME_LIST = [
@@ -149,20 +149,20 @@ class TIPOScript(scripts.Script):
     def create_new_prompt_area(self, i2i: int, prompt_row: OnComponent):
         with prompt_row.component:
             with gr.Column(visible=not opts.tipo_no_extra_input):
-                new_tag_propmt_area = gr.Textbox(
+                new_tag_prompt_area = gr.Textbox(
                     label="Tag Prompt",
                     lines=3,
-                    placeholder="Tag Prompt for TIPO (Put Tags to Propmt region)",
+                    placeholder="Tag Prompt for TIPO (Put Tags to Prompt region)",
                 )
-                new_propmt_area = gr.Textbox(
+                new_prompt_area = gr.Textbox(
                     label="Natural Language Prompt",
                     lines=3,
-                    placeholder="Natural Language Prompt for TIPO (Put Tags to Propmt region)",
+                    placeholder="Natural Language Prompt for TIPO (Put Tags to Prompt region)",
                 )
-        self.tag_prompt_area[i2i] = new_tag_propmt_area
+        self.tag_prompt_area[i2i] = new_tag_prompt_area
         self.prompt_area_row[i2i] = gr.Row()
         # with self.prompt_area_row[i2i]:
-        self.prompt_area[i2i * 2 + 1] = new_propmt_area
+        self.prompt_area[i2i * 2 + 1] = new_prompt_area
 
     def set_prompt_area(self, i2i: int, component: OnComponent):
         self.prompt_area[i2i * 2] = component.component
@@ -577,8 +577,8 @@ class TIPOScript(scripts.Script):
                 gguf = False
             models.load_model(target, gguf, device="cpu" if gguf_use_cpu else "cuda")
             self.current_model = model
-        propmt_preview = prompt.replace("\n", " ")[:40]
-        logger.info(f"Processing propmt: {propmt_preview}...")
+        prompt_preview = prompt.replace("\n", " ")[:40]
+        logger.info(f"Processing prompt: {prompt_preview}...")
         logger.info(f"Processing with seed: {seed}")
         prompt_without_extranet, res = parse_prompt(prompt)
         prompt_parse_strength = parse_prompt_attention(prompt_without_extranet)

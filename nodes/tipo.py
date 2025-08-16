@@ -221,7 +221,7 @@ class TIPO:
                 ["very_short", "short", "long", "very_long"],
                 {"default": "long"},
             ),
-            "seed": ("INT", {"default": 1234}),
+            "seed": ("INT", {"default": 1234, "min": -1, "max": 0xffffffffffffffff}),
             "device": (["cpu", "cuda"], {"default": "cuda"}),
         },
     }
