@@ -113,14 +113,14 @@ def apply_strength(tag_map, strength_map, strength_map_nl, break_map):
                 new_prompt = ""
                 for part, strength in strength_map_nl:
                     before, org_prompt = org_prompt.split(part, 1)
-                    new_prompt += before.replace("(", "\(").replace(")", "\)")
-                    part = part.replace("(", "\(").replace(")", "\)")
+                    new_prompt += before.replace("(", "\\(").replace(")", "\\)")
+                    part = part.replace("(", "\\(").replace(")", "\\)")
                     new_prompt += f"({part}:{strength})"
                 new_prompt += org_prompt
             tag_map[cate] = new_prompt
             continue
         for org_tag in tag_map[cate]:
-            tag = org_tag.replace("(", "\(").replace(")", "\)")
+            tag = org_tag.replace("(", "\\(").replace(")", "\\)")
             if org_tag in strength_map:
                 new_list.append(f"({tag}:{strength_map[org_tag]})")
             else:
