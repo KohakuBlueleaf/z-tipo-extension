@@ -126,19 +126,15 @@ def install_llama_cpp():
 
     has_cuda = torch.cuda.is_available()
     has_metal = torch.backends.mps.is_available() and torch.backends.mps.is_built()
-    if has_metal:
-        logger.warning(
-            "Apple Silicon with Metal backend detected. "
-            "Prebuilt llama-cpp-python may not be available. "
-            "You may need to install it manually, as described in the repository's readme: "
-            "https://github.com/abetlen/llama-cpp-python/"
-        )
+
     if has_metal:
         # torch.version.cuda is None on Apple Silicon
         cuda_version = None
+        arch = "metal"
     else:
         cuda_version = torch.version.cuda.replace(".", "")
-    arch = "cu" + cuda_version if has_cuda else "cpu"
+        arch = "cu" + cuda_version if has_cuda else "cpu"
+
     if has_cuda and arch > "cu124":
         arch = "cu124"
 
@@ -146,6 +142,14 @@ def install_llama_cpp():
         if py_ver in py_vers and arch in archs and platform in platforms:
             break
     else:
+        if cuda_version is None:
+            logger.warning(
+                "Apple Silicon with Metal backend detected. "
+                "Prebuilt llama-cpp-python may not be available. "
+                "You may need to install it manually, as described in the repository's readme: "
+                "https://github.com/abetlen/llama-cpp-python/"
+            )
+            return
         logger.warning("Official wheel not found, using legacy builds")
         install_llama_cpp_legacy(cuda_version, has_cuda)
         return
