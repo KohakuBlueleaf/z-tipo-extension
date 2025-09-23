@@ -132,7 +132,7 @@ def install_llama_cpp():
         arch = "cu" + cuda_version
     elif has_metal:
         # torch.version.cuda is None on Apple Silicon
-        cuda_version = ""
+        cuda_version = "metal"
         arch = "metal"
     else:
         cuda_version = ""
@@ -145,7 +145,7 @@ def install_llama_cpp():
         if py_ver in py_vers and arch in archs and platform in platforms:
             break
     else:
-        if cuda_version is None:
+        if cuda_version == "metal":
             logger.warning(
                 "Apple Silicon with Metal backend detected. "
                 "Prebuilt llama-cpp-python may not be available. "
