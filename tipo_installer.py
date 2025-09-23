@@ -1,13 +1,13 @@
 ##
 ## ====================== Installer ======================
 ##
-import os
-import sys
-import logging
 import copy
-import pkg_resources
+import logging
+import os
 import subprocess
+import sys
 
+import pkg_resources
 
 KGEN_VERSION = "0.2.0"
 python = sys.executable
@@ -115,11 +115,6 @@ def install_llama_cpp():
     logger.info("Attempting to install LLaMA-CPP-Python")
     import torch
 
-    has_cuda = torch.cuda.is_available()
-    cuda_version = torch.version.cuda.replace(".", "")
-    arch = "cu" + cuda_version if has_cuda else "cpu"
-    if has_cuda and arch > "cu124":
-        arch = "cu124"
     platform = sys.platform
     py_ver = f"cp{sys.version_info.major}{sys.version_info.minor}"
     if platform == "darwin":
@@ -128,6 +123,24 @@ def install_llama_cpp():
         platform = "win_amd64"
     elif platform == "linux":
         platform = "linux_x86_64"
+
+    has_cuda = torch.cuda.is_available()
+    has_metal = torch.backends.mps.is_available() and torch.backends.mps.is_built()
+    if has_metal:
+        logger.warning(
+            "Apple Silicon with Metal backend detected. "
+            "Prebuilt llama-cpp-python may not be available. "
+            "You may need to install it manually, as described in the repository's readme: "
+            "https://github.com/abetlen/llama-cpp-python/"
+        )
+    if has_metal:
+        # torch.version.cuda is None on Apple Silicon
+        cuda_version = None
+    else:
+        cuda_version = torch.version.cuda.replace(".", "")
+    arch = "cu" + cuda_version if has_cuda else "cpu"
+    if has_cuda and arch > "cu124":
+        arch = "cu124"
 
     for version, (py_vers, archs, platforms) in version_arch.items():
         if py_ver in py_vers and arch in archs and platform in platforms:
