@@ -129,11 +129,14 @@ def install_llama_cpp():
 
     if has_metal:
         # torch.version.cuda is None on Apple Silicon
-        cuda_version = None
+        cuda_version = ""
         arch = "metal"
-    else:
+    elif has_cuda:
         cuda_version = torch.version.cuda.replace(".", "")
-        arch = "cu" + cuda_version if has_cuda else "cpu"
+        arch = "cu" + cuda_version
+    else:
+        cuda_version = ""
+        arch = "cpu"
 
     if has_cuda and arch > "cu124":
         arch = "cu124"
