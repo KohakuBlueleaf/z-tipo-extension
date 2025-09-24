@@ -147,12 +147,12 @@ def install_llama_cpp():
     else:
         if cuda_version == "metal":
             logger.warning(
-                "Apple Silicon with Metal backend detected. "
+                "Metal Performance Shaders detected. "
                 "Prebuilt llama-cpp-python may not be available. "
-                "You may need to install it manually, as described in the repository's readme: "
-                "https://github.com/abetlen/llama-cpp-python/"
+                "For better performance, you may need to reinstall and build it manually. "
+                "Goto: https://github.com/abetlen/llama-cpp-python/"
             )
-            return
+
         logger.warning("Official wheel not found, using legacy builds")
         install_llama_cpp_legacy(cuda_version, has_cuda)
         return
