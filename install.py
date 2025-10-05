@@ -54,7 +54,7 @@ def install_llama_cpp():
     import torch
 
     has_cuda = torch.cuda.is_available()
-    cuda_version = torch.version.cuda.replace(".", "")
+    cuda_version = torch.version.cuda.replace(".", "") if has_cuda else ""
     arch = "cu" + cuda_version if has_cuda else "cpu"
     if has_cuda and arch >= "cu124":
         arch = "cu124"
