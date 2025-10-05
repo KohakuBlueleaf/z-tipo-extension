@@ -664,7 +664,11 @@ class TIPOScript(scripts.Script):
                 addon["tags"].append(tag)
         addon = apply_strength(addon, strength_map, strength_map_nl, break_map)
         unformatted_prompt_by_tipo = (
-            prompt_without_extranet + ", " + ", ".join(addon["tags"]) + "\n" + addon["nl"]
+            prompt_without_extranet
+            + ", "
+            + ", ".join(addon["tags"])
+            + "\n"
+            + addon["nl"]
         )
         tag_map = apply_strength(tag_map, strength_map, strength_map_nl, break_map)
         formatted_prompt_by_tipo = apply_format(tag_map, format).replace(

@@ -275,7 +275,7 @@ class TIPO:
             else:
                 extra = {}
                 device = f"{torch.device.type}:{args.cuda_device or 0}"
-            models.load_model(target, gguf, device=device,  **extra)
+            models.load_model(target, gguf, device=device, **extra)
             current_model = (tipo_model, device)
         aspect_ratio = width / height
         prompt_without_extranet = tags
