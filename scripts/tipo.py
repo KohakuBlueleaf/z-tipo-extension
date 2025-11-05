@@ -138,6 +138,8 @@ class TIPOScript(scripts.Script):
         self.prompt_area = [None, None, None, None]
         self.tag_prompt_area = [None, None]
         self.prompt_area_row = [None, None]
+        self.prompt_gen_button = [None, None]
+        self.tipo_accordion_row = [None, None]
         self.current_model = None
         self.on_after_component_elem_id = [
             ("txt2img_prompt_row", lambda x: self.create_new_prompt_area(0, x)),
@@ -147,21 +149,27 @@ class TIPOScript(scripts.Script):
         ]
 
     def create_new_prompt_area(self, i2i: int, prompt_row: OnComponent):
-        with prompt_row.component:
-            with gr.Column(visible=not opts.tipo_no_extra_input):
+        # Create first row: Tag Prompt and Natural Language Prompt in 2 columns
+        with gr.Row(visible=not opts.tipo_no_extra_input):
+            with gr.Column(scale=1):
                 new_tag_prompt_area = gr.Textbox(
                     label="Tag Prompt",
                     lines=3,
                     placeholder="Tag Prompt for TIPO (Put Tags to Prompt region)",
                 )
+            with gr.Column(scale=1):
                 new_prompt_area = gr.Textbox(
                     label="Natural Language Prompt",
                     lines=3,
                     placeholder="Natural Language Prompt for TIPO (Put Tags to Prompt region)",
                 )
-        self.tag_prompt_area[i2i] = new_tag_prompt_area
+
+        # Create second row: Generate Prompt button (below the two input areas)
         self.prompt_area_row[i2i] = gr.Row()
-        # with self.prompt_area_row[i2i]:
+        # Create third row: TIPO accordion
+        self.tipo_accordion_row[i2i] = gr.Row()
+
+        self.tag_prompt_area[i2i] = new_tag_prompt_area
         self.prompt_area[i2i * 2 + 1] = new_prompt_area
 
     def set_prompt_area(self, i2i: int, component: OnComponent):
@@ -174,51 +182,51 @@ class TIPOScript(scripts.Script):
         return scripts.AlwaysVisible
 
     def ui(self, is_img2img):
+        # Create Generate Prompt button in its own row
         with self.prompt_area_row[is_img2img]:
-            with gr.Column(
-                scale=1, min_width=180, visible=not opts.tipo_no_extra_input
-            ):
-                prompt_gen = gr.Button(value="Generate Prompt")
-            with gr.Column(scale=6):
-                with (
-                    InputAccordion(False, open=False, label=self.title())
-                    if InputAccordion
-                    else gr.Accordion(open=False, label=self.title())
-                ) as tipo_acc:
-                    with gr.Row():
-                        with gr.Column():
-                            with gr.Row():
-                                with gr.Column(scale=1):
-                                    if InputAccordion is None:
-                                        enabled_check = gr.Checkbox(
-                                            label="Enabled", value=False, min_width=20
-                                        )
-                                    else:
-                                        enabled_check = tipo_acc
-                                    read_orig_prompt_btn = gr.Button(
-                                        size="sm",
-                                        value="Apply original prompt",
-                                        visible=False,
-                                        min_width=20,
+            prompt_gen = gr.Button(value="Generate Prompt", visible=not opts.tipo_no_extra_input)
+
+        # Create TIPO accordion in a separate row
+        with self.tipo_accordion_row[is_img2img]:
+            with (
+                InputAccordion(False, open=False, label=self.title())
+                if InputAccordion
+                else gr.Accordion(open=False, label=self.title())
+            ) as tipo_acc:
+                with gr.Row():
+                    with gr.Column():
+                        with gr.Row():
+                            with gr.Column(scale=1):
+                                if InputAccordion is None:
+                                    enabled_check = gr.Checkbox(
+                                        label="Enabled", value=False, min_width=20
                                     )
-                                with gr.Column(scale=3):
-                                    orig_prompt_area = gr.TextArea(visible=False)
-                                    orig_prompt_light = gr.HTML("")
-                                orig_prompt_area.change(
-                                    lambda x: PROMPT_INDICATE_HTML * bool(x),
-                                    inputs=orig_prompt_area,
-                                    outputs=orig_prompt_light,
+                                else:
+                                    enabled_check = tipo_acc
+                                read_orig_prompt_btn = gr.Button(
+                                    size="sm",
+                                    value="Apply original prompt",
+                                    visible=False,
+                                    min_width=20,
                                 )
-                                orig_prompt_area.change(
-                                    lambda x: gr.update(visible=bool(x)),
-                                    inputs=orig_prompt_area,
-                                    outputs=read_orig_prompt_btn,
-                                )
-                                read_orig_prompt_btn.click(
-                                    fn=lambda x: x,
-                                    inputs=[orig_prompt_area],
-                                    outputs=self.prompt_area[is_img2img],
-                                )
+                            with gr.Column(scale=3):
+                                orig_prompt_area = gr.TextArea(visible=False)
+                                orig_prompt_light = gr.HTML("")
+                            orig_prompt_area.change(
+                                lambda x: PROMPT_INDICATE_HTML * bool(x),
+                                inputs=orig_prompt_area,
+                                outputs=orig_prompt_light,
+                            )
+                            orig_prompt_area.change(
+                                lambda x: gr.update(visible=bool(x)),
+                                inputs=orig_prompt_area,
+                                outputs=read_orig_prompt_btn,
+                            )
+                            read_orig_prompt_btn.click(
+                                fn=lambda x: x,
+                                inputs=[orig_prompt_area],
+                                outputs=self.prompt_area[is_img2img],
+                            )
 
                             tag_length_radio = gr.Radio(
                                 label="Tags Length target",
