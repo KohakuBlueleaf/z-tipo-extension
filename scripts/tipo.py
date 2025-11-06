@@ -138,6 +138,7 @@ class TIPOScript(scripts.Script):
         self.prompt_area = [None, None, None, None]
         self.tag_prompt_area = [None, None]
         self.prompt_area_row = [None, None]
+        self.tipo_accordion_row = [None, None]
         self.current_model = None
         self.on_after_component_elem_id = [
             ("txt2img_prompt_row", lambda x: self.create_new_prompt_area(0, x)),
@@ -147,21 +148,27 @@ class TIPOScript(scripts.Script):
         ]
 
     def create_new_prompt_area(self, i2i: int, prompt_row: OnComponent):
-        with prompt_row.component:
-            with gr.Column(visible=not opts.tipo_no_extra_input):
+        # Create first row: Tag Prompt and Natural Language Prompt in 2 columns
+        with gr.Row(visible=not opts.tipo_no_extra_input):
+            with gr.Column(scale=1):
                 new_tag_prompt_area = gr.Textbox(
                     label="Tag Prompt",
                     lines=3,
                     placeholder="Tag Prompt for TIPO (Put Tags to Prompt region)",
                 )
+            with gr.Column(scale=1):
                 new_prompt_area = gr.Textbox(
                     label="Natural Language Prompt",
                     lines=3,
                     placeholder="Natural Language Prompt for TIPO (Put Tags to Prompt region)",
                 )
-        self.tag_prompt_area[i2i] = new_tag_prompt_area
+
+        # Create second row: Generate Prompt button (below the two input areas)
         self.prompt_area_row[i2i] = gr.Row()
-        # with self.prompt_area_row[i2i]:
+        # Create third row: TIPO accordion
+        self.tipo_accordion_row[i2i] = gr.Row()
+
+        self.tag_prompt_area[i2i] = new_tag_prompt_area
         self.prompt_area[i2i * 2 + 1] = new_prompt_area
 
     def set_prompt_area(self, i2i: int, component: OnComponent):
