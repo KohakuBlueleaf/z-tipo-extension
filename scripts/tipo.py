@@ -25,9 +25,10 @@ from modules.extra_networks import parse_prompt
 from modules.shared import opts
 from modules.ui_components import ToolButton
 
-if hasattr(opts, "hypertile_enable_unet"):  # webui >= 1.7
+# Try to import InputAccordion (WebUI >= 1.7)
+try:
     from modules.ui_components import InputAccordion
-else:
+except ImportError:
     InputAccordion = None
 
 import kgen.models as models
@@ -216,21 +217,40 @@ class TIPOScript(scripts.Script):
             ):
                 prompt_gen = gr.Button(value="Generate Prompt")
             with gr.Column(scale=6):
-                with (
-                    InputAccordion(False, open=False, label=self.title())
-                    if InputAccordion
-                    else gr.Accordion(open=False, label=self.title())
-                ) as tipo_acc:
+                # Create accordion with enable checkbox on the label
+                tab_name = 'img2img' if is_img2img else 'txt2img'
+
+                if InputAccordion is not None:
+                    # WebUI >= 1.7: Use InputAccordion (checkbox on accordion label)
+                    tipo_acc = InputAccordion(
+                        value=False,
+                        label=self.title(),
+                        elem_id=f"{tab_name}_tipo_accordion",
+                        visible=True,
+                    )
+                    enabled_check = tipo_acc
+                else:
+                    # WebUI < 1.7: Use regular Accordion
+                    tipo_acc = gr.Accordion(
+                        open=False,
+                        label=self.title(),
+                        elem_id=f"{tab_name}_tipo_accordion"
+                    )
+                    enabled_check = None  # Will be created inside
+
+                with tipo_acc:
+                    # For older WebUI versions, add enable checkbox inside
+                    if InputAccordion is None:
+                        enabled_check = gr.Checkbox(
+                            label="Enabled",
+                            value=False,
+                            elem_id=f"{tab_name}_tipo_enabled",
+                        )
+
                     with gr.Row():
                         with gr.Column():
                             with gr.Row():
                                 with gr.Column(scale=1):
-                                    if InputAccordion is None:
-                                        enabled_check = gr.Checkbox(
-                                            label="Enabled", value=False, min_width=20
-                                        )
-                                    else:
-                                        enabled_check = tipo_acc
                                     read_orig_prompt_btn = gr.Button(
                                         size="sm",
                                         value="Apply original prompt",
