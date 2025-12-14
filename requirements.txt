@@ -1,2 +1,3 @@
 tipo-kgen>=0.1.9
 transformers
+llama-cpp-python
