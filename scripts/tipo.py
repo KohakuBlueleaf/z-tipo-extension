@@ -322,7 +322,6 @@ class TIPOScript(scripts.Script):
                                     seed_num_input = gr.Number(
                                         label="Seed for upsampling tags",
                                         minimum=-1,
-                                        maximum=2**31 - 1,
                                         step=1,
                                         scale=4,
                                         value=-1,
