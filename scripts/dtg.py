@@ -14,6 +14,7 @@ from modules.scripts import basedir, OnComponent
 from modules.processing import (
     StableDiffusionProcessingTxt2Img,
     StableDiffusionProcessingImg2Img,
+    fix_seed,
 )
 from modules.prompt_parser import parse_prompt_attention
 from modules.extra_networks import parse_prompt
@@ -376,6 +377,7 @@ class DTGScript(scripts.Script):
         if seed == -1:
             seed = random.randrange(4294967294)
         self.write_infotext(p, p.prompt, "BEFORE", seed, *args)
+        fix_seed(p)
         seed = int(seed + p.seed)
 
         p.prompt = self._process(p.prompt, aspect_ratio, seed, *args)
