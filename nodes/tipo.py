@@ -4,6 +4,11 @@ from pathlib import Path
 from typing import Any
 
 import torch
+if os.name == "nt":
+    torch_lib_path = os.path.join(os.path.dirname(torch.__file__), "lib")
+    if os.path.exists(torch_lib_path):
+        os.add_dll_directory(torch_lib_path)
+
 import folder_paths
 from comfy.cli_args import args
 
@@ -274,7 +279,8 @@ class TIPO:
                 extra = {"main_device": args.cuda_device or 0}
             else:
                 extra = {}
-                device = f"{torch.device.type}:{args.cuda_device or 0}"
+                if device == "cuda":
+                    device = f"cuda:{args.cuda_device or 0}"
             models.load_model(target, gguf, device=device, **extra)
             current_model = (tipo_model, device)
         aspect_ratio = width / height
@@ -445,7 +451,13 @@ class TIPOOperation:
             else:
                 target = tipo_model
                 gguf = False
-            models.load_model(target, gguf, device=device)
+            if gguf:
+                extra = {"main_device": args.cuda_device or 0}
+            else:
+                extra = {}
+                if device == "cuda":
+                    device = f"cuda:{args.cuda_device or 0}"
+            models.load_model(target, gguf, device=device, **extra)
             current_model = (tipo_model, device)
         aspect_ratio = width / height
         prompt_without_extranet = tags
