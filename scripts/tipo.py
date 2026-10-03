@@ -15,7 +15,10 @@ from modules.processing import (
     StableDiffusionProcessingTxt2Img,
     fix_seed,
 )
-from modules.prompt_parser import parse_prompt_attention
+try:
+    from modules.prompt_parser import parse_prompt_attention
+except ImportError:
+    from backend.text_processing.parsing import parse_prompt_attention
 from modules.scripts import OnComponent, basedir
 from modules.shared import opts
 from modules.ui_components import ToolButton
