@@ -136,22 +136,16 @@ def ensure_tipo_kgen():
 
 
 def rebind_kgen_llama():
-    """Hand kgen the Llama class if llama-cpp only arrived after kgen was imported.
-
-    kgen.models binds `Llama` once, at its own import, and falls back to None.
-    Loading the model list at startup therefore pins None into the module long
-    before the wheel is installed, and every later GGUF load would trip kgen's
-    `assert Llama is not None` despite llama-cpp being present.
-    """
-    models = sys.modules.get("kgen.models")
-    if models is None or getattr(models, "Llama", None) is not None:
-        return
+    """Update KGen's loader and generation backend after a late installation."""
     try:
         from llama_cpp import Llama
     except ImportError:
         return
-    models.Llama = Llama
-    logger.info("Rebound llama_cpp.Llama into the already-imported kgen.models")
+    for module_name in ("kgen.models", "kgen.generate"):
+        module = sys.modules.get(module_name)
+        if module is not None and module.Llama is not Llama:
+            module.Llama = Llama
+            logger.info(f"Rebound llama_cpp.Llama into the already-imported {module_name}")
 
 
 def ensure_runtime():
